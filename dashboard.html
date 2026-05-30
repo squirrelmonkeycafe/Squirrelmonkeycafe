@@ -12,6 +12,8 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .card { background: white; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
         .pending-table { border-left: 4px solid #f97316; }
+        .new-order-flash { animation: flashHighlight 1s ease-out; }
+        @keyframes flashHighlight { 0% { background-color: #ffedd5; } 100% { background-color: transparent; } }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen font-sans">
@@ -29,6 +31,9 @@
                 <option value="table4">Table 4</option>
                 <option value="table5">Table 5</option>
             </select>
+            <button id="soundToggle" class="text-gray-500 hover:text-orange-500 transition" title="Mute alerts">
+                <i data-lucide="volume-x" class="w-5 h-5"></i>
+            </button>
             <span class="text-xs text-gray-400">Updated: <span id="lastUpdate">--</span></span>
         </div>
     </header>
@@ -39,8 +44,8 @@
         </div>
 
         <div id="content" class="hidden space-y-6">
-            <!-- PENDING ORDERS BOARD -->
-            <div class="card">
+            <!-- PENDING ORDERS BOARD (sticky) -->
+            <div class="card sticky top-20 z-20 bg-orange-50 bg-opacity-90 backdrop-blur">
                 <h3 class="font-semibold mb-4 flex items-center gap-2">
                     <i data-lucide="clipboard-list" class="w-5 h-5 text-orange-500"></i>
                     Pending Orders (Today)
@@ -98,6 +103,35 @@
         const API_URL = "https://sheet.best/api/sheets/56e750d0-3dcb-4ddd-ba17-3997bb41d273/tabs/Orders";
         let allRows = [];
         let filterTable = 'all';
+        let previousOrderIds = new Set(); // track order timestamps to detect new ones
+        let soundEnabled = false;
+
+        // Simple beep using AudioContext
+        function playBeep() {
+            if (!soundEnabled) return;
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = 800;
+                gain.gain.value = 0.3;
+                osc.start();
+                osc.stop(ctx.currentTime + 0.15);
+            } catch(e) { /* ignore */ }
+        }
+
+        document.getElementById('soundToggle').addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('soundToggle').querySelector('i');
+            if (soundEnabled) {
+                icon.setAttribute('data-lucide', 'volume-2');
+            } else {
+                icon.setAttribute('data-lucide', 'volume-x');
+            }
+            lucide.createIcons();
+        });
 
         function parseJSON(str) {
             try { return JSON.parse(str); } catch(e) { return []; }
@@ -111,7 +145,7 @@
                 allRows = data.filter(row => row.Timestamp);
                 processAndRender();
             } catch(e) {
-                document.getElementById('loading').innerHTML = '<p class="text-red-500">Failed to load data</p>';
+                document.getElementById('loading').innerHTML = '<p class="text-red-500">Connection error</p>';
             }
         }
 
@@ -123,9 +157,17 @@
             const orders = rows.filter(r => r.Action === 'ORDER');
             const analytics = rows.filter(r => r.Action === 'ANALYTICS');
 
-            // Pending orders (today's orders only)
+            // Detect new orders for alert
+            const currentOrderIds = new Set(orders.map(o => o.Timestamp));
+            const newOrders = orders.filter(o => !previousOrderIds.has(o.Timestamp));
+            if (newOrders.length > 0 && previousOrderIds.size > 0) {
+                playBeep();
+            }
+            previousOrderIds = currentOrderIds;
+
+            // Pending orders (today's)
             const todayOrders = orders.filter(o => o.Timestamp?.startsWith(todayStr));
-            renderPendingOrders(todayOrders);
+            renderPendingOrders(todayOrders, newOrders);
 
             // Metrics
             const ordersCount = todayOrders.length;
@@ -140,15 +182,16 @@
             document.getElementById('aovToday').textContent = '₹' + Math.round(aov).toLocaleString('en-IN');
             document.getElementById('busiestTable').textContent = busiest;
 
-            // Charts (same as before, unchanged)
-            // ... (chart rendering code from original dashboard) ...
+            // Charts
+            updateCharts(orders, analytics);
 
             // Recent orders
             const recentOrders = orders.sort((a,b)=>(b.Timestamp||'').localeCompare(a.Timestamp||'')).slice(0,20);
             document.getElementById('liveOrders').innerHTML = recentOrders.map(o => {
                 const items = parseJSON(o['Items (JSON)'] || '[]');
                 const itemList = items.map(i => `${i.title} x${i.qty}`).join(', ');
-                return `<div class="flex items-start justify-between border-b border-gray-100 pb-2">
+                const isNew = newOrders.some(no => no.Timestamp === o.Timestamp);
+                return `<div class="flex items-start justify-between border-b border-gray-100 pb-2 ${isNew ? 'new-order-flash' : ''}">
                     <div><p class="font-semibold text-sm">${o.Table} · ${o.Method}</p><p class="text-xs text-gray-500">${itemList || 'No items'}</p></div>
                     <span class="font-bold text-orange-600">₹${o.Total}</span></div>`;
             }).join('');
@@ -158,7 +201,7 @@
             document.getElementById('content').classList.remove('hidden');
         }
 
-        function renderPendingOrders(todayOrders) {
+        function renderPendingOrders(todayOrders, newOrders) {
             const grouped = {};
             todayOrders.forEach(o => {
                 const table = o.Table || 'Unknown';
@@ -174,7 +217,8 @@
                     const minsAgo = Math.floor((now - orderTime) / 60000);
                     const timeStr = minsAgo < 1 ? 'Just now' : `${minsAgo} min ago`;
                     const itemStr = items.map(i => `${i.title} x${i.qty}`).join(', ');
-                    return `<div class="flex justify-between items-center text-sm py-1">
+                    const isNew = newOrders.some(no => no.Timestamp === o.Timestamp);
+                    return `<div class="flex justify-between items-center text-sm py-1 ${isNew ? 'new-order-flash font-semibold' : ''}">
                         <span class="text-gray-700">${itemStr}</span>
                         <span class="text-xs text-gray-500">${timeStr} · ${o.Method}</span>
                     </div>`;
@@ -186,10 +230,68 @@
             }).join('') || '<p class="text-gray-500">No pending orders for today.</p>';
         }
 
-        // Chart rendering functions (identical to the previous dashboard) ...
-        // I'll keep them as they were – they work fine.
-
+        // Chart functions
         let revenueChart, tableChart, paymentChart, forecastChart;
+
+        function updateCharts(orders, analytics) {
+            const now = new Date();
+            const last7 = [];
+            for (let i=6; i>=0; i--) {
+                const d = new Date(now);
+                d.setDate(d.getDate()-i);
+                const ds = d.toISOString().split('T')[0];
+                const dayOrders = orders.filter(o => o.Timestamp?.startsWith(ds));
+                const sum = dayOrders.reduce((s,o)=>s+parseFloat(o.Total||0),0);
+                last7.push({ date: d.toLocaleDateString('en-IN',{month:'short',day:'numeric'}), revenue: sum });
+            }
+            renderRevenueChart(last7);
+
+            const tablePerf = { table1:0, table2:0, table3:0, table4:0, table5:0 };
+            orders.forEach(o => { if(tablePerf[o.Table]!==undefined) tablePerf[o.Table]++; });
+            renderTableChart(tablePerf);
+
+            const paymentCounts = { Cash: 0, UPI: 0 };
+            orders.forEach(o => {
+                if(o.Method?.includes('CASH')) paymentCounts.Cash++;
+                else if(o.Method?.startsWith('UPI')) paymentCounts.UPI++;
+            });
+            renderPaymentChart(paymentCounts);
+
+            // Forecast
+            const dailyRevenue = {};
+            orders.forEach(o => {
+                const d = o.Timestamp?.split('T')[0];
+                if(!d) return;
+                dailyRevenue[d] = (dailyRevenue[d] || 0) + parseFloat(o.Total||0);
+            });
+            const sortedDays = Object.keys(dailyRevenue).sort();
+            const historicalDays = sortedDays.slice(-91);
+            const revenueValues = historicalDays.map(d => dailyRevenue[d]);
+            if (revenueValues.length > 1) {
+                const n = revenueValues.length;
+                const x = Array.from({length: n}, (_,i) => i);
+                const sumX = x.reduce((a,b)=>a+b,0);
+                const sumY = revenueValues.reduce((a,b)=>a+b,0);
+                const sumXY = x.reduce((t,xi,i)=>t+xi*revenueValues[i],0);
+                const sumX2 = x.reduce((t,xi)=>t+xi*xi,0);
+                const slope = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX);
+                const intercept = (sumY - slope*sumX) / n;
+                const forecastValues = Array.from({length:7}, (_,i)=>Math.max(0, slope*(n+i) + intercept));
+                renderForecastChart(historicalDays, revenueValues, forecastValues);
+            }
+
+            // CTA
+            const ctaCounts = { ad_click:0, zomato:0, magicpin:0, whatsapp:0 };
+            analytics.forEach(a => {
+                const extra = (a.Extra||'').toLowerCase();
+                if(extra.includes('partner')) ctaCounts.ad_click++;
+                else if(extra.includes('zomato')) ctaCounts.zomato++;
+                else if(extra.includes('magicpin')) ctaCounts.magicpin++;
+                else if(extra.includes('whatsapp')) ctaCounts.whatsapp++;
+            });
+            renderCTASection(ctaCounts);
+        }
+
         function renderRevenueChart(data) {
             const ctx = document.getElementById('revenueChart').getContext('2d');
             if (revenueChart) revenueChart.destroy();
@@ -208,6 +310,7 @@
                 options: { responsive: true, plugins: { legend: { display: false } } }
             });
         }
+
         function renderTableChart(data) {
             const ctx = document.getElementById('tableChart').getContext('2d');
             if (tableChart) tableChart.destroy();
@@ -224,6 +327,7 @@
                 options: { responsive: true, plugins: { legend: { display: false } } }
             });
         }
+
         function renderPaymentChart(data) {
             const ctx = document.getElementById('paymentChart').getContext('2d');
             if (paymentChart) paymentChart.destroy();
@@ -238,6 +342,7 @@
                 }
             });
         }
+
         function renderForecastChart(historicalDays, historicalValues, forecastValues) {
             const ctx = document.getElementById('forecastChart').getContext('2d');
             if (forecastChart) forecastChart.destroy();
@@ -275,6 +380,7 @@
                 options: { responsive: true }
             });
         }
+
         function renderCTASection(counts) {
             const container = document.getElementById('ctaContainer');
             const items = [
@@ -292,78 +398,16 @@
             lucide.createIcons();
         }
 
-        // Forecast calculation
-        function calculateForecast(orders) {
-            const dailyRevenue = {};
-            orders.forEach(o => {
-                const d = o.Timestamp?.split('T')[0];
-                if(!d) return;
-                dailyRevenue[d] = (dailyRevenue[d] || 0) + parseFloat(o.Total||0);
-            });
-            const sortedDays = Object.keys(dailyRevenue).sort();
-            const historicalDays = sortedDays.slice(-91);
-            const revenueValues = historicalDays.map(d => dailyRevenue[d]);
-            if (revenueValues.length < 2) return;
-            const n = revenueValues.length;
-            const x = Array.from({length: n}, (_,i) => i);
-            const sumX = x.reduce((a,b)=>a+b,0);
-            const sumY = revenueValues.reduce((a,b)=>a+b,0);
-            const sumXY = x.reduce((t,xi,i)=>t + xi*revenueValues[i], 0);
-            const sumX2 = x.reduce((t,xi)=>t + xi*xi, 0);
-            const slope = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX);
-            const intercept = (sumY - slope*sumX) / n;
-            const forecastValues = Array.from({length:7}, (_,i)=>Math.max(0, slope*(n+i) + intercept));
-            renderForecastChart(historicalDays, revenueValues, forecastValues);
-        }
-
-        // Update processAndRender to include forecast and charts
-        // I'll combine the missing chart calls:
-        const originalProcess = processAndRender;
-        processAndRender = function() {
-            originalProcess();
-            const rows = filterTable === 'all' ? allRows : allRows.filter(r => r.Table === filterTable);
-            const orders = rows.filter(r => r.Action === 'ORDER');
-            const analytics = rows.filter(r => r.Action === 'ANALYTICS');
-            const now = new Date();
-            const last7 = [];
-            for (let i=6; i>=0; i--) {
-                const d = new Date(now);
-                d.setDate(d.getDate()-i);
-                const ds = d.toISOString().split('T')[0];
-                const dayOrders = orders.filter(o => o.Timestamp?.startsWith(ds));
-                const sum = dayOrders.reduce((s,o)=>s+parseFloat(o.Total||0),0);
-                last7.push({ date: d.toLocaleDateString('en-IN',{month:'short',day:'numeric'}), revenue: sum });
-            }
-            renderRevenueChart(last7);
-            const tablePerf = { table1:0, table2:0, table3:0, table4:0, table5:0 };
-            orders.forEach(o => { if(tablePerf[o.Table]!==undefined) tablePerf[o.Table]++; });
-            renderTableChart(tablePerf);
-            const paymentCounts = { Cash: 0, UPI: 0 };
-            orders.forEach(o => {
-                if(o.Method?.includes('CASH')) paymentCounts.Cash++;
-                else if(o.Method?.startsWith('UPI')) paymentCounts.UPI++;
-            });
-            renderPaymentChart(paymentCounts);
-            calculateForecast(orders);
-            const ctaCounts = { ad_click:0, zomato:0, magicpin:0, whatsapp:0 };
-            analytics.forEach(a => {
-                const extra = (a.Extra||'').toLowerCase();
-                if(extra.includes('partner')) ctaCounts.ad_click++;
-                else if(extra.includes('zomato')) ctaCounts.zomato++;
-                else if(extra.includes('magicpin')) ctaCounts.magicpin++;
-                else if(extra.includes('whatsapp')) ctaCounts.whatsapp++;
-            });
-            renderCTASection(ctaCounts);
-        };
-
         document.getElementById('tableFilter').addEventListener('change', e => {
             filterTable = e.target.value;
+            previousOrderIds.clear(); // reset so new orders are detected again
             processAndRender();
         });
 
+        // Initial fetch and 5-second interval
         function init() {
             fetchData();
-            setInterval(fetchData, 30000);
+            setInterval(fetchData, 5000);
         }
         window.onload = init;
     </script>
