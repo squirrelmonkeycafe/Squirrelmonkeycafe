@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Squirrel Monkey | Best Coffee & Waffles in Hyderabad</title>
+    <meta name="description" content="Visit Squirrel Monkey for the best coffee, black coffee, cold coffee, and premium waffles in Hyderabad. Order online, book a table, or visit our cafe today.">
+    <meta name="keywords" content="Squirrel Monkey, cafe in Hyderabad, best coffee near me, waffle shop, biscoff waffles, table booking cafe, order coffee online, Zomato, Swiggy, local cafe">
+    <meta name="author" content="Squirrel Monkey Cafe">
+
+    <meta property="og:title" content="Squirrel Monkey | Cafe & Kitchen">
+    <meta property="og:description" content="Craving the best coffee and waffles in town? Order online or book a table at Squirrel Monkey today!">
+    <meta property="og:type" content="restaurant.menu">
+    <meta property="og:url" content="https://www.squirrelmonkeycafe.com">
+    <meta property="og:image" content="https://via.placeholder.com/1200x630.png?text=Squirrel+Monkey+Cafe">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Squirrel Monkey | Cafe & Kitchen">
+    <meta name="twitter:description" content="Your favorite Coffee & Waffles. Order directly or book a table!">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Restaurant",
+        "name": "Squirrel Monkey",
+        "image": "https://via.placeholder.com/800x600.png?text=Squirrel+Monkey",
+        "description": "A premium cafe serving freshly brewed coffee and gourmet waffles in Hyderabad.",
+        "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Hyderabad Cafe Street",
+            "addressLocality": "Hyderabad",
+            "addressRegion": "TS",
+            "postalCode": "500001",
+            "addressCountry": "IN"
+        },
+        "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": 17.414619,
+            "longitude": 78.4310892
+        },
+        "url": "https://www.squirrelmonkeycafe.com",
+        "telephone": "+919876543210",
+        "servesCuisine": ["Cafe", "Coffee", "Desserts", "Waffles"],
+        "menu": "https://www.squirrelmonkeycafe.com/menu",
+        "acceptsReservations": "True"
+    }
+    </script>
+
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-475BB3204Q"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-475BB3204Q', {
+            send_page_view: false,
+            cookie_domain: 'squirrelmonkeycafe.github.io',
+            custom_map: {
+                dimension1: 'table_id',
+                dimension2: 'payment_method',
+                dimension3: 'app_name',
+                dimension4: 'order_channel',
+                dimension5: 'order_date',
+                dimension6: 'order_time',
+                dimension7: 'item_category_viewed'
+            }
+        });
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        html, body { height: 100%; height: 100dvh; margin: 0; padding: 0; overscroll-behavior: none; -webkit-overflow-scrolling: auto; }
+
+        .slide-up-enter {
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .slide-up-enter-active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans max-w-md mx-auto relative shadow-2xl flex flex-col" style="height: 100dvh; overflow: hidden;">
+
+    <div id="toast-container" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] w-max pointer-events-none"></div>
+
+    <header class="bg-white z-40 shadow-sm px-4 pt-4 pb-2 flex-shrink-0">
+        <div class="flex justify-between items-center mb-3">
+            <div>
+                <h1 class="text-2xl font-black text-orange-600 tracking-tight">Squirrel Monkey</h1>
+                <p class="text-xs text-gray-500 font-medium">Café & Kitchen</p>
+            </div>
+            <div class="flex gap-2">
+                <a href="https://zomato.com" target="_blank" onclick="trackDeliveryAppClick('zomato')" class="flex items-center gap-1 bg-red-50 text-red-600 px-2 py-1 rounded text-[10px] font-bold border border-red-100">
+                    Zomato <i data-lucide="external-link" class="w-3 h-3"></i>
+                </a>
+                <a href="https://magicpin.in" target="_blank" onclick="trackDeliveryAppClick('magicpin')" class="flex items-center gap-1 bg-purple-50 text-purple-600 px-2 py-1 rounded text-[10px] font-bold border border-purple-100">
+                    MagicPin <i data-lucide="external-link" class="w-3 h-3"></i>
+                </a>
+            </div>
+        </div>
+        <div id="search-container" class="relative">
+            <input type="text" id="searchInput" placeholder="Search for coffee, waffles..." onkeyup="filterMenu()" class="w-full bg-gray-100 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+            <i data-lucide="search" class="absolute left-3 top-2.5 text-gray-400 w-4 h-4"></i>
+        </div>
+    </header>
+
+    <div id="ad-banner" class="bg-blue-900 text-white px-4 py-2 flex justify-between items-center z-40 shadow-md flex-shrink-0">
+        <div class="flex flex-col">
+            <span class="text-[10px] font-bold text-blue-300 uppercase tracking-wider">Sponsored</span>
+            <span class="text-sm font-semibold">Visit Our Partner Location</span>
+        </div>
+        <button onclick="trackAdClick('Partner Location Map', 'https://maps.app.goo.gl/eARGQRryjAHgTDiR6?g_st=ac')" class="bg-yellow-400 text-blue-900 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm hover:bg-yellow-300 transition">
+            <i data-lucide="map-pin" class="w-3 h-3"></i> Get Directions
+        </button>
+    </div>
+
+    <main id="app-content" class="flex-1 overflow-y-auto pb-24 relative fade-in" style="-webkit-overflow-scrolling: touch;"></main>
+
+    <nav id="bottom-nav" class="fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 px-6 py-3 flex justify-between items-center pb-safe z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <button onclick="switchTab('menu')" class="nav-btn text-orange-500 flex flex-col items-center gap-1" data-tab="menu">
+            <i data-lucide="coffee" class="w-5 h-5"></i><span class="text-[10px] font-medium">Menu</span>
+        </button>
+        <button onclick="switchTab('location')" class="nav-btn text-gray-400 flex flex-col items-center gap-1" data-tab="location">
+            <i data-lucide="map-pin" class="w-5 h-5"></i><span class="text-[10px] font-medium">Location</span>
+        </button>
+        <button onclick="switchTab('booking')" class="nav-btn text-gray-400 flex flex-col items-center gap-1" data-tab="booking">
+            <i data-lucide="calendar" class="w-5 h-5"></i><span class="text-[10px] font-medium">Book Table</span>
+        </button>
+        <button onclick="switchTab('cart')" class="nav-btn text-gray-400 flex flex-col items-center gap-1 relative" data-tab="cart">
+            <div class="relative">
+                <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+                <span id="cart-badge" class="hidden absolute -top-2 -right-2 bg-orange-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center">0</span>
+            </div>
+            <span class="text-[10px] font-medium">Cart</span>
+        </button>
+    </nav>
+
+    <script>
+        // ====================== CONFIGURATION ======================
+        const MENU_API_URL = "https://script.google.com/macros/s/AKfycbwYOUR_MENU_SCRIPT_ID/exec";
+        // Sheet.best API endpoints (your connection ID)
+        const ORDERS_API_URL = "https://sheet.best/api/sheets/56e750d0-3dcb-4ddd-ba17-3997bb41d273/tabs/Orders";
+        const BOOKINGS_API_URL = "https://sheet.best/api/sheets/56e750d0-3dcb-4ddd-ba17-3997bb41d273/tabs/Bookings";
+        const RESTAURANT_UPI_ID = "your-restaurant-upi@okaxis";
+        const RESTAURANT_NAME = "Squirrel Monkey";
+        const BUSINESS_WHATSAPP_NUMBER = "919876543210";
+
+        function getTableId() {
+            const path = window.location.pathname;
+            const match = path.match(/\/(table[1-5])/);
+            if (match) return match[1];
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('table')) return 'table' + params.get('table');
+            return 'table1';
+        }
+        const CURRENT_TABLE = getTableId();
+        console.log("Active table:", CURRENT_TABLE);
+
+        // ====================== STATE ======================
+        let activeTab = 'menu';
+        let cart = {};
+        let activeCategory = 'ALL';
+        let menuItems = [];
+
+        // ====================== RICH FOOTER ======================
+        const FOOTER_HTML = `
+            <div class="mt-8 bg-gradient-to-r from-gray-50 to-white border-t border-gray-200 rounded-t-2xl shadow-inner p-4 text-center">
+                <p class="text-xs text-gray-500">Built with ❤️ by</p>
+                <a href="https://www.denisiawebops.org" target="_blank" class="inline-flex items-center gap-1 mt-1 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-full font-semibold text-xs hover:bg-blue-100 transition">
+                    <i data-lucide="external-link" class="w-3 h-3"></i>
+                    www.denisiawebops.org
+                </a>
+            </div>
+        `;
+
+        // ====================== GA4 HELPERS ======================
+        function trackGA4Event(eventName, params = {}) {
+            gtag('event', eventName, {
+                table_id: CURRENT_TABLE,
+                ...params
+            });
+        }
+
+        function trackDeliveryAppClick(appName) {
+            trackGA4Event('delivery_app_click', {
+                app_name: appName,
+                click_location: 'header_cta',
+                engagement_type: 'outbound_click'
+            });
+        }
+
+        function trackWhatsAppOrder(orderItems, total, method) {
+            var now = new Date();
+            trackGA4Event('whatsapp_order_sent', {
+                payment_method: method,
+                order_channel: 'whatsapp',
+                currency: 'INR',
+                value: total,
+                order_date: now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+                order_time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
+                total_quantity: orderItems.reduce(function(sum, i) { return sum + i.qty; }, 0),
+                items: orderItems.map(function(i) {
+                    return { item_id: i.id, item_name: i.title, item_category: i.category || 'menu', price: i.price, quantity: i.qty, currency: 'INR' };
+                })
+            });
+        }
+
+        window.handleWhatsAppOrderClick = function(message, total, method) {
+            var orderItems = Object.entries(cart).map(function([id, qty]) {
+                var item = menuItems.find(function(i) { return i.id == id; });
+                return { id: item.id, title: item.title, category: item.category, price: item.price, qty: qty };
+            });
+            trackWhatsAppOrder(orderItems, total, method);
+            openWhatsApp(message);
+        }
+
+        // ====================== UTILS ======================
+        function showToast(msg) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'bg-gray-900 text-white px-4 py-2 rounded-full text-sm font-bold shadow-xl mb-2 fade-in transition-opacity duration-300 pointer-events-auto';
+            toast.innerText = msg;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        async function sendToSheet(url, payload) {
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } catch (e) { console.error("Sheet update failed", e); }
+        }
+
+        function trackAdClick(adName, url) {
+            gtag('event', 'ad_click', { 'event_category': 'Engagement', 'event_label': adName });
+            // Log ad click to Orders sheet using Extra column
+            sendToSheet(ORDERS_API_URL, {
+                Timestamp: new Date().toISOString(),
+                Table: CURRENT_TABLE,
+                Action: 'ANALYTICS',
+                Method: '',
+                Total: '',
+                "Items (JSON)": '',
+                Extra: adName
+            });
+            window.open(url, '_blank');
+        }
+
+        function getCartTotal() {
+            return Object.entries(cart).reduce((total, [id, qty]) => {
+                const item = menuItems.find(i => i.id == id);
+                return total + (item ? item.price * qty : 0);
+            }, 0);
+        }
+
+        function getCartCount() {
+            return Object.values(cart).reduce((a, b) => a + b, 0);
+        }
+
+        function updateCartBadge() {
+            const count = getCartCount();
+            const badge = document.getElementById('cart-badge');
+            if (count > 0) {
+                badge.innerText = count;
+                badge.classList.remove('hidden');
+                badge.classList.add('animate-bounce');
+                setTimeout(() => badge.classList.remove('animate-bounce'), 1000);
+            } else { badge.classList.add('hidden'); }
+        }
+
+        window.updateCart = function(id, delta) {
+            const current = cart[id] || 0;
+            const next = current + delta;
+            if (next <= 0) delete cart[id];
+            else cart[id] = next;
+            updateCartBadge();
+
+            const item = menuItems.find(i => i.id == id);
+            if (delta > 0 && item) {
+                trackGA4Event('add_to_cart', {
+                    items: [{ item_id: item.id, item_name: item.title, price: item.price, quantity: delta }],
+                    value: item.price * delta
+                });
+            }
+
+            if (activeTab === 'menu') renderMenu();
+            if (activeTab === 'cart') renderCart();
+        }
+
+        // ====================== DYNAMIC MENU LOADING ======================
+        async function loadMenu() {
+            try {
+                const response = await fetch(MENU_API_URL);
+                if (!response.ok) throw new Error("Network response was not ok");
+                const data = await response.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    menuItems = data;
+                    console.log("Menu loaded:", menuItems.length, "items");
+                } else { throw new Error("Empty or invalid menu data"); }
+            } catch (error) {
+                console.warn("Using fallback menu:", error);
+                menuItems = [
+                    { id: '1', title: 'COFFEE', category: 'COFFEE', price: 50, type: 'Veg', desc: 'Classic hot coffee' },
+                    { id: '2', title: 'BLACK COFFEE', category: 'COFFEE', price: 70, type: 'Veg', desc: 'Strong black coffee' },
+                    { id: '3', title: 'CHOCOLATE COFFEE', category: 'COFFEE', price: 100, type: 'Veg', desc: 'Coffee infused with rich chocolate' },
+                    { id: '4', title: 'COLD COFFEE', category: 'COFFEE', price: 100, type: 'Veg', desc: 'Refreshing cold coffee blend' },
+                    { id: '5', title: 'LATTE', category: 'COFFEE', price: 150, type: 'Veg', desc: 'Smooth milky latte' },
+                    { id: '86', title: 'WAFFLE', category: 'WAFFLE', price: 170, type: 'Veg', desc: 'Classic crispy waffle' },
+                    { id: '87', title: 'BISCOFF WAFFLE', category: 'WAFFLE', price: 200, type: 'Veg', desc: 'Topped with Lotus Biscoff spread' },
+                    { id: '88', title: 'TRIPLE CHOCOLATE WAFFLE', category: 'WAFFLE', price: 200, type: 'Veg', desc: 'Dark, milk, and white chocolate' },
+                    { id: '89', title: 'MANGO WAFFLE', category: 'WAFFLE', price: 180, type: 'Veg', desc: 'Seasonal fresh mango toppings' },
+                    { id: '90', title: 'CHOCO CHIP WAFFLE', category: 'WAFFLE', price: 180, type: 'Veg', desc: 'Loaded with chocolate chips' },
+                    { id: '91', title: 'KITKAT WAFFLE', category: 'WAFFLE', price: 190, type: 'Veg', desc: 'Crushed KitKat and chocolate syrup' }
+                ];
+            }
+        }
+
+        // ====================== WHATSAPP DEEP LINK HELPER ======================
+        function openWhatsApp(message) {
+            const phone = `+${BUSINESS_WHATSAPP_NUMBER}`;
+            const encoded = encodeURIComponent(message);
+            const url = `whatsapp://send?phone=${phone}&text=${encoded}`;
+            window.location.href = url;
+            setTimeout(() => {
+                window.open(`https://wa.me/${BUSINESS_WHATSAPP_NUMBER}?text=${encoded}`, '_blank');
+            }, 1500);
+        }
+
+        window.setCategory = function(cat) {
+            activeCategory = cat;
+            if (cat !== 'ALL') {
+                trackGA4Event('view_item_list', {
+                    item_list_name: cat,
+                    item_category_viewed: cat
+                });
+            }
+            renderMenu();
+        }
+
+        // ====================== RENDERERS ======================
+        function renderMenu() {
+            const searchVal = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = menuItems.filter(item => {
+                const matchSearch = item.title.toLowerCase().includes(searchVal);
+                const matchCategory = activeCategory === 'ALL' || item.category === activeCategory;
+                return matchSearch && matchCategory;
+            });
+            const categories = ['ALL', ...new Set(menuItems.map(i => i.category))];
+            let html = '<div class="pt-2"><div class="flex overflow-x-auto hide-scrollbar px-4 gap-2 mb-6">';
+            categories.forEach(cat => {
+                const activeClass = activeCategory === cat ? 'bg-orange-500 text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200';
+                html += `<button onclick="setCategory('${cat}')" class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${activeClass}">${cat}</button>`;
+            });
+            html += '</div><div class="px-4 space-y-4">';
+            filtered.forEach(item => {
+                const qty = cart[item.id] || 0;
+                const icon = item.category === 'COFFEE' ? 'coffee' : 'utensils';
+                let buttonHtml = !qty 
+                    ? `<button onclick="updateCart('${item.id}', 1)" class="bg-white text-green-600 border border-green-200 shadow-md rounded-lg px-6 py-1.5 font-bold text-sm hover:bg-green-50 transition-colors">ADD</button>`
+                    : `<div class="bg-white text-green-600 border border-green-200 shadow-md rounded-lg flex items-center h-8">
+                        <button onclick="updateCart('${item.id}', -1)" class="px-3 h-full flex items-center justify-center text-gray-600"><i data-lucide="minus" class="w-3 h-3"></i></button>
+                        <span class="font-bold text-sm w-4 text-center">${qty}</span>
+                        <button onclick="updateCart('${item.id}', 1)" class="px-3 h-full flex items-center justify-center"><i data-lucide="plus" class="w-3 h-3"></i></button>
+                       </div>`;
+                html += `
+                <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex justify-between gap-4 fade-in">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-1 mb-1">
+                            <div class="w-3 h-3 rounded-sm border ${item.type === 'Veg' ? 'border-green-500' : 'border-red-500'} flex items-center justify-center">
+                                <div class="w-1.5 h-1.5 rounded-full ${item.type === 'Veg' ? 'bg-green-500' : 'bg-red-500'}"></div>
+                            </div>
+                        </div>
+                        <h3 class="font-bold text-gray-800 text-base">${item.title}</h3>
+                        <p class="text-gray-800 font-semibold text-sm mb-1">₹${item.price}</p>
+                        <p class="text-xs text-gray-500 line-clamp-2">${item.desc}</p>
+                    </div>
+                    <div class="w-28 flex flex-col items-end justify-between relative">
+                        <div class="w-24 h-24 bg-orange-50 rounded-xl flex items-center justify-center text-orange-200 mb-2 overflow-hidden shadow-inner">
+                            <i data-lucide="${icon}" class="w-10 h-10"></i>
+                        </div>
+                        <div class="absolute -bottom-2 right-1">${buttonHtml}</div>
+                    </div>
+                </div>`;
+            });
+            html += '</div></div>';
+            html += FOOTER_HTML;
+            document.getElementById('app-content').innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function filterMenu() { if (activeTab === 'menu') renderMenu(); }
+
+        function renderCart() {
+            if (getCartCount() === 0) {
+                document.getElementById('app-content').innerHTML = `
+                <div class="flex flex-col items-center justify-center h-[60vh] text-gray-400 fade-in">
+                    <i data-lucide="shopping-cart" class="w-16 h-16 mb-4 opacity-20"></i>
+                    <h2 class="text-xl font-bold text-gray-600">Your cart is empty</h2>
+                    <p class="text-sm mt-2">Looks like you haven't added anything yet.</p>
+                    <button onclick="switchTab('menu')" class="mt-6 bg-orange-500 text-white px-6 py-2 rounded-full font-bold shadow-md">Browse Menu</button>
+                </div>
+                ${FOOTER_HTML}`;
+                lucide.createIcons();
+                return;
+            }
+
+            trackGA4Event('view_cart', {
+                items: Object.entries(cart).map(([id, qty]) => {
+                    const item = menuItems.find(i => i.id == id);
+                    return { item_id: item.id, item_name: item.title, price: item.price, quantity: qty };
+                })
+            });
+
+            let total = getCartTotal();
+            let html = `<div class="px-4 pt-4 fade-in"><h2 class="text-xl font-bold mb-4 text-gray-800">Review Order</h2><div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-6">`;
+            Object.entries(cart).forEach(([id, qty], idx) => {
+                const item = menuItems.find(i => i.id == id);
+                html += `
+                <div class="flex justify-between items-center py-3 ${idx !== 0 ? 'border-t border-gray-50' : ''}">
+                    <div class="flex-1"><h4 class="text-sm font-semibold text-gray-800">${item.title}</h4><p class="text-xs text-gray-500">₹${item.price} x ${qty}</p></div>
+                    <div class="flex items-center gap-4">
+                        <div class="bg-gray-50 rounded-lg flex items-center border border-gray-200">
+                            <button onclick="updateCart('${id}', -1)" class="p-1.5 text-gray-600"><i data-lucide="minus" class="w-3 h-3"></i></button>
+                            <span class="font-bold text-sm w-4 text-center">${qty}</span>
+                            <button onclick="updateCart('${id}', 1)" class="p-1.5 text-green-600"><i data-lucide="plus" class="w-3 h-3"></i></button>
+                        </div>
+                        <span class="font-bold text-gray-800 w-12 text-right">₹${item.price * qty}</span>
+                    </div>
+                </div>`;
+            });
+            html += `</div>
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-6">
+                <div class="flex justify-between mb-2 text-sm text-gray-600"><span>Item Total</span><span>₹${total}</span></div>
+                <div class="flex justify-between mb-2 text-sm text-gray-600"><span>Taxes & Charges</span><span>₹0</span></div>
+                <div class="border-t border-dashed border-gray-200 my-3"></div>
+                <div class="flex justify-between font-bold text-lg text-gray-800"><span>To Pay</span><span>₹${total}</span></div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <button onclick="handleCheckout('CASH')" class="bg-gray-800 text-white py-3.5 rounded-xl font-bold flex justify-center items-center gap-2">Pay Cash</button>
+                <button onclick="switchTab('upi')" class="bg-orange-500 text-white py-3.5 rounded-xl font-bold flex justify-center items-center gap-2 shadow-lg shadow-orange-500/30">Pay UPI</button>
+            </div></div>`;
+            html += FOOTER_HTML;
+            document.getElementById('app-content').innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function renderUPI() {
+            let total = getCartTotal();
+            let html = `
+            <div class="h-full bg-gray-50 pt-6 px-4 fade-in">
+                <button onclick="switchTab('cart')" class="flex items-center text-gray-500 mb-6 font-medium text-sm">
+                    <i data-lucide="chevron-left" class="w-4 h-4 mr-1"></i> Back to Cart
+                </button>
+                <div class="text-center mb-8"><p class="text-gray-500 text-sm mb-1">Total Amount to Pay</p><h2 class="text-4xl font-black text-gray-800">₹${total}</h2></div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 space-y-4">
+                    <h3 class="font-bold text-gray-700 text-sm mb-2 uppercase tracking-wide">Select UPI App</h3>
+                    <button onclick="handleCheckout('UPI_GPay')" class="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition">
+                        <div class="flex items-center gap-3"><div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">G</div><span class="font-bold text-gray-800">Google Pay</span></div>
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-gray-400"></i>
+                    </button>
+                    <button onclick="handleCheckout('UPI_PhonePe')" class="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition">
+                        <div class="flex items-center gap-3"><div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">P</div><span class="font-bold text-gray-800">PhonePe</span></div>
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-gray-400"></i>
+                    </button>
+                    <button onclick="handleCheckout('UPI_Paytm')" class="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 hover:border-cyan-500 hover:bg-cyan-50 transition">
+                        <div class="flex items-center gap-3"><div class="w-8 h-8 bg-cyan-100 rounded-full flex items-center justify-center text-cyan-600 font-bold">T</div><span class="font-bold text-gray-800">Paytm</span></div>
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-gray-400"></i>
+                    </button>
+                    <div class="relative flex items-center justify-center py-2"><div class="absolute border-t border-gray-200 w-full"></div><span class="bg-white px-3 text-xs text-gray-400 relative z-10">OR</span></div>
+                    <button onclick="handleCheckout('UPI_Other')" class="w-full flex items-center justify-center gap-2 p-4 rounded-xl bg-gray-900 text-white font-bold">
+                        <i data-lucide="indian-rupee" class="w-4 h-4"></i> Open Any UPI App
+                    </button>
+                </div>
+            </div>`;
+            html += FOOTER_HTML;
+            document.getElementById('app-content').innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function renderLocation() {
+            trackGA4Event('view_location', { page_title: 'location' });
+            let html = `
+            <div class="pb-6 fade-in">
+                <div class="w-full h-64 bg-gray-200 relative">
+                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3806.940306161947!2d78.4310892!3d17.414619!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bcb97479717208d%3A0xc3fbfdc16a3a105c!2sSquirrel%20Monkey!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                </div>
+                <div class="p-5">
+                    <h2 class="text-2xl font-black text-gray-800 mb-2">Squirrel Monkey</h2>
+                    <p class="text-sm text-gray-600 mb-6 flex items-start gap-2"><i data-lucide="map-pin" class="text-orange-500 shrink-0 mt-0.5 w-4 h-4"></i> Visit us for the best coffee and waffles in town.</p>
+                    <a href="https://maps.app.goo.gl/eARGQRryjAHgTDiR6?g_st=ac" target="_blank" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 mb-4"><i data-lucide="navigation" class="w-4 h-4"></i> Open in Google Maps</a>
+                    <div class="bg-orange-50 rounded-xl p-4 border border-orange-100">
+                        <h3 class="font-bold text-orange-800 text-sm mb-2 flex items-center gap-2"><i data-lucide="clock" class="w-4 h-4"></i> Opening Hours</h3>
+                        <div class="text-sm text-orange-900 space-y-1">
+                            <div class="flex justify-between"><span>Mon - Fri:</span><span>10:00 AM - 11:00 PM</span></div>
+                            <div class="flex justify-between font-bold"><span>Sat - Sun:</span><span>09:00 AM - 12:00 AM</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+            html += FOOTER_HTML;
+            document.getElementById('app-content').innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function renderBooking() {
+            let html = `
+            <div class="p-4 pb-12 fade-in">
+                <h2 class="text-2xl font-black text-gray-800 mb-6">Book a Table</h2>
+                <form id="bookingForm" onsubmit="submitBooking(event)" class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-4">
+                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Your Name</label><input id="bk-name" required type="text" placeholder="Enter your full name" class="w-full bg-gray-50 rounded-xl px-4 py-3 text-sm border border-gray-200 focus:outline-none focus:border-orange-500"></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Date</label><input id="bk-date" required type="date" class="w-full bg-gray-50 rounded-xl px-4 py-3 text-sm border border-gray-200 focus:outline-none focus:border-orange-500"></div>
+                        <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Time</label><input id="bk-time" required type="time" class="w-full bg-gray-50 rounded-xl px-4 py-3 text-sm border border-gray-200 focus:outline-none focus:border-orange-500"></div>
+                    </div>
+                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Number of Guests</label>
+                        <select id="bk-guests" class="w-full bg-gray-50 rounded-xl px-4 py-3 text-sm border border-gray-200 focus:outline-none focus:border-orange-500">
+                            <option value="1">1 Person</option><option value="2" selected>2 People</option><option value="3">3 People</option><option value="4">4 People</option><option value="5">5+ People</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full bg-orange-500 text-white font-bold py-3.5 rounded-xl mt-4 shadow-lg shadow-orange-500/30">Confirm Booking</button>
+                </form>
+            </div>`;
+            html += FOOTER_HTML;
+            document.getElementById('app-content').innerHTML = html;
+            lucide.createIcons();
+        }
+
+        window.submitBooking = function(e) {
+            e.preventDefault();
+            const name = document.getElementById('bk-name').value;
+            const date = document.getElementById('bk-date').value;
+            const time = document.getElementById('bk-time').value;
+            const guests = document.getElementById('bk-guests').value;
+            const dayName = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
+
+            sendToSheet(BOOKINGS_API_URL, {
+                Timestamp: new Date().toISOString(),
+                Table: CURRENT_TABLE,
+                Name: name,
+                Date: date,
+                Time: time,
+                Guests: guests
+            });
+
+            gtag('event', 'generate_lead', { 'event_category': 'Booking', 'value': guests });
+            showToast("Table Booked Successfully!");
+
+            showBookingSuccess(name, date, time, guests, dayName);
+        }
+
+        function showBookingSuccess(name, date, time, guests, dayName) {
+            const message = `Book a table for ${guests} ${guests == 1 ? 'person' : 'people'} on ${date} at ${time}, ${dayName}. Name: ${name}.`;
+            document.getElementById('app-content').innerHTML = `
+            <div class="flex flex-col items-center justify-center px-6 pt-10 text-center fade-in">
+                <i data-lucide="check-circle" class="w-20 h-20 text-green-500 mb-6"></i>
+                <h2 class="text-2xl font-black text-gray-800 mb-2">Table Booked!</h2>
+                <p class="text-gray-500 mb-6">${message}</p>
+                <button onclick="openWhatsApp('${message.replace(/'/g, "\\'")}')" class="inline-flex items-center gap-2 bg-green-500 text-white px-6 py-3 rounded-full font-bold shadow-lg hover:bg-green-600 transition mb-4">
+                    <i data-lucide="send" class="w-5 h-5"></i> Send Booking via WhatsApp
+                </button>
+                <button onclick="switchTab('menu')" class="text-gray-500 underline text-sm">Back to Home</button>
+            </div>
+            ${FOOTER_HTML}`;
+            lucide.createIcons();
+        }
+
+        // ====================== CHECKOUT & AD POP-UP ======================
+        window.handleCheckout = function(method) {
+            const orderItems = Object.entries(cart).map(([id, qty]) => {
+                const item = menuItems.find(i => i.id == id);
+                return { id: item.id, title: item.title, price: item.price, qty, total: item.price * qty };
+            });
+            const total = getCartTotal();
+
+            // IMPORTANT: key must match sheet header exactly → "Items (JSON)"
+            sendToSheet(ORDERS_API_URL, {
+                Timestamp: new Date().toISOString(),
+                Table: CURRENT_TABLE,
+                Action: 'ORDER',
+                Method: method,
+                Total: total,
+                "Items (JSON)": JSON.stringify(orderItems),
+                Extra: ''
+            });
+
+            trackGA4Event('purchase', {
+                transaction_id: 'T_' + Date.now(),
+                value: total,
+                currency: "INR",
+                items: orderItems.map(i => ({ item_id: i.id, item_name: i.title, price: i.price, quantity: i.qty })),
+                payment_method: method,
+                table_id: CURRENT_TABLE
+            });
+
+            cart = {};
+            updateCartBadge();
+
+            showOrderSuccess(method, total, orderItems);
+        }
+
+        function showOrderSuccess(method, total, orderItems) {
+            let itemsText = orderItems.map(i => `${i.title} x${i.qty} (₹${i.total})`).join(', ');
+            const message = `Order from Table# ${CURRENT_TABLE}: ${itemsText}. Total: ₹${total}. Payment: ${method}.`;
+
+            const isUPI = method.startsWith('UPI_');
+            const upiUrl = isUPI ? `upi://pay?pa=${RESTAURANT_UPI_ID}&pn=${encodeURIComponent(RESTAURANT_NAME)}&am=${total}&cu=INR&tn=Order` : null;
+
+            document.getElementById('app-content').innerHTML = `
+            <div class="relative h-full flex flex-col items-center justify-start pt-10 text-center fade-in">
+                <i data-lucide="check-circle" class="w-20 h-20 text-green-500 mb-4"></i>
+                <h2 class="text-2xl font-black text-gray-800 mb-2">Order Confirmed!</h2>
+                <p class="text-gray-500 mb-6 px-4">${isUPI ? 'Complete payment via UPI to confirm.' : 'Please pay cash at the counter.'}</p>
+            </div>`;
+
+            const overlay = document.createElement('div');
+            overlay.id = 'ad-popup-overlay';
+            overlay.className = 'fixed inset-0 z-50 bg-black bg-opacity-40 flex items-end justify-center';
+            overlay.style.pointerEvents = 'auto';
+            overlay.innerHTML = `
+                <div id="ad-popup-panel" class="slide-up-enter w-full max-w-md bg-white rounded-t-3xl p-6 shadow-2xl relative">
+                    <button id="close-ad-popup" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                    <div class="mb-4 pb-4 border-b border-gray-100">
+                        <h3 class="text-sm font-bold text-gray-700 mb-2">📲 Send order to restaurant</h3>
+                        <button onclick="handleWhatsAppOrderClick('${message.replace(/'/g, "\\'")}', ${total}, '${method}')" class="w-full flex items-center justify-center gap-2 bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 transition">
+                            <i data-lucide="send" class="w-4 h-4"></i> Send Order via WhatsApp
+                        </button>
+                    </div>
+                    <div>
+                        <span class="text-xs font-bold text-orange-500 uppercase tracking-wider">Sponsored</span>
+                        <h3 class="text-lg font-bold text-gray-800 mt-1">Visit Our Partner Café</h3>
+                        <p class="text-sm text-gray-600 mt-1">Get exclusive discounts on your next visit!</p>
+                        <div class="flex rounded-full overflow-hidden border border-gray-300 shadow-sm mt-4">
+                            <a href="tel:+919876543210" class="flex-1 flex items-center justify-center gap-1 py-3 bg-white text-gray-700 font-medium text-sm hover:bg-gray-50 transition border-r border-gray-200">
+                                <i data-lucide="phone" class="w-4 h-4"></i> Call
+                            </a>
+                            <a href="https://maps.app.goo.gl/eARGQRryjAHgTDiR6?g_st=ac" target="_blank" class="flex-1 flex items-center justify-center gap-1 py-3 bg-white text-gray-700 font-medium text-sm hover:bg-gray-50 transition border-r border-gray-200">
+                                <i data-lucide="map-pin" class="w-4 h-4"></i> Maps
+                            </a>
+                            <a href="https://partnercafe.com" target="_blank" class="flex-1 flex items-center justify-center gap-1 py-3 bg-white text-gray-700 font-medium text-sm hover:bg-gray-50 transition">
+                                <i data-lucide="external-link" class="w-4 h-4"></i> Website
+                            </a>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.appendChild(overlay);
+
+            setTimeout(() => {
+                const panel = document.getElementById('ad-popup-panel');
+                if (panel) panel.classList.add('slide-up-enter-active');
+            }, 50);
+
+            document.getElementById('close-ad-popup').addEventListener('click', () => {
+                overlay.remove();
+                if (isUPI) {
+                    document.getElementById('app-content').innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-[70vh] px-6 text-center fade-in">
+                        <i data-lucide="check-circle" class="w-20 h-20 text-green-500 mb-6"></i>
+                        <h2 class="text-2xl font-black text-gray-800 mb-2">Payment Initiated!</h2>
+                        <p class="text-gray-500 mb-8">UPI payment has been triggered. Complete it in your app.</p>
+                        <button onclick="switchTab('menu')" class="bg-orange-500 text-white px-8 py-3 rounded-xl font-bold shadow-md">Back to Home</button>
+                    </div>
+                    ${FOOTER_HTML}`;
+                    lucide.createIcons();
+                    setTimeout(() => { window.location.href = upiUrl; }, 1000);
+                } else {
+                    switchTab('menu');
+                }
+            });
+
+            document.getElementById('bottom-nav').style.display = 'none';
+            lucide.createIcons();
+        }
+
+        // ====================== TAB SWITCHING ======================
+        window.switchTab = function(tab) {
+            const overlay = document.getElementById('ad-popup-overlay');
+            if (overlay) overlay.remove();
+
+            activeTab = tab;
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-orange-500'); btn.classList.add('text-gray-400');
+                if (btn.dataset.tab === tab) { btn.classList.remove('text-gray-400'); btn.classList.add('text-orange-500'); }
+            });
+            const searchContainer = document.getElementById('search-container');
+            if (tab === 'menu') { searchContainer.style.display = 'block'; renderMenu(); }
+            else {
+                searchContainer.style.display = 'none';
+                if (tab === 'cart') renderCart();
+                if (tab === 'location') renderLocation();
+                if (tab === 'booking') renderBooking();
+                if (tab === 'upi') renderUPI();
+            }
+            const bNav = document.getElementById('bottom-nav');
+            bNav.style.display = (tab === 'upi' || tab === 'menu' || tab === 'location' || tab === 'booking' || tab === 'cart') ? 'flex' : 'none';
+            const main = document.getElementById('app-content');
+            if (main) main.scrollTop = 0;
+            gtag('event', 'page_view', {
+                page_title: tab,
+                page_location: window.location.href + '#' + tab,
+                table_id: CURRENT_TABLE
+            });
+        }
+
+        // ====================== INIT ======================
+        window.onload = async () => {
+            await loadMenu();
+            switchTab('menu');
+            trackGA4Event('session_start', {
+                table_id: CURRENT_TABLE,
+                landing_tab: 'menu'
+            });
+            lucide.createIcons();
+            const mainEl = document.getElementById('app-content');
+            if (mainEl) { mainEl.style.webkitOverflowScrolling = 'touch'; mainEl.style.overflowY = 'auto'; }
+        };
+    </script>
+</body>
+</html>
