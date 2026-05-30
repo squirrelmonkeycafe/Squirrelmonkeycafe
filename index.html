@@ -247,14 +247,14 @@
             gtag('event', 'ad_click', { 'event_category': 'Engagement', 'event_label': adName });
             // Log ad click to the Orders sheet as an ANALYTICS action
             sendToSheet(ORDERS_API_URL, {
-                Timestamp: new Date().toISOString(),
-                Table: CURRENT_TABLE,
-                Action: 'ANALYTICS',
-                Method: '',
-                Total: '',
-                Items (JSON)": '',
-                Extra: adname
-            });
+"Timestamp: ""2026-05-31T..."","
+"Table: ""table1"","
+"Action: ""ORDER"","
+"Method: ""CASH"","
+Total: 200,
+"Items (JSON): ""[{\""id\"":\""1\"",\""title\"":\""COFFEE\"",\""price\"":50,\""qty\"":2}]"","
+"Extra: """""
+});
             window.open(url, '_blank');
         }
 
