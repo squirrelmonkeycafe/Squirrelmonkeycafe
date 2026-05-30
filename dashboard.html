@@ -11,10 +11,10 @@
         .fade-in { animation: fadeIn 0.4s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .card { background: white; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .pending-table { border-left: 4px solid #f97316; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen font-sans">
-    <!-- Header -->
     <header class="bg-white shadow-sm sticky top-0 z-30 p-4 flex items-center justify-between">
         <div>
             <h1 class="text-2xl font-black text-orange-600">Squirrel Monkey</h1>
@@ -29,19 +29,25 @@
                 <option value="table4">Table 4</option>
                 <option value="table5">Table 5</option>
             </select>
-            <span class="text-xs text-gray-400">Last updated: <span id="lastUpdate">--</span></span>
+            <span class="text-xs text-gray-400">Updated: <span id="lastUpdate">--</span></span>
         </div>
     </header>
 
-    <!-- Main Content -->
     <main class="max-w-6xl mx-auto p-4 space-y-6" id="app">
-        <!-- Loading -->
         <div id="loading" class="flex justify-center py-20">
             <i data-lucide="loader" class="animate-spin text-orange-500 w-10 h-10"></i>
         </div>
 
-        <!-- Dashboard Grid -->
         <div id="content" class="hidden space-y-6">
+            <!-- PENDING ORDERS BOARD -->
+            <div class="card">
+                <h3 class="font-semibold mb-4 flex items-center gap-2">
+                    <i data-lucide="clipboard-list" class="w-5 h-5 text-orange-500"></i>
+                    Pending Orders (Today)
+                </h3>
+                <div id="pendingOrders" class="space-y-4"></div>
+            </div>
+
             <!-- Today's Metrics -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="card">
@@ -62,28 +68,12 @@
                 </div>
             </div>
 
-            <!-- Charts Row 1 -->
+            <!-- Charts -->
             <div class="grid md:grid-cols-2 gap-6">
-                <div class="card">
-                    <h3 class="font-semibold mb-3">Revenue Trend (Last 7 Days)</h3>
-                    <canvas id="revenueChart" height="200"></canvas>
-                </div>
-                <div class="card">
-                    <h3 class="font-semibold mb-3">Table Performance</h3>
-                    <canvas id="tableChart" height="200"></canvas>
-                </div>
-            </div>
-
-            <!-- Charts Row 2 -->
-            <div class="grid md:grid-cols-2 gap-6">
-                <div class="card">
-                    <h3 class="font-semibold mb-3">Payment Methods</h3>
-                    <canvas id="paymentChart" height="200"></canvas>
-                </div>
-                <div class="card">
-                    <h3 class="font-semibold mb-3">13‑Week Forecast</h3>
-                    <canvas id="forecastChart" height="200"></canvas>
-                </div>
+                <div class="card"><h3 class="font-semibold mb-3">Revenue Trend (7 Days)</h3><canvas id="revenueChart" height="200"></canvas></div>
+                <div class="card"><h3 class="font-semibold mb-3">Table Performance</h3><canvas id="tableChart" height="200"></canvas></div>
+                <div class="card"><h3 class="font-semibold mb-3">Payment Methods</h3><canvas id="paymentChart" height="200"></canvas></div>
+                <div class="card"><h3 class="font-semibold mb-3">13-Week Forecast</h3><canvas id="forecastChart" height="200"></canvas></div>
             </div>
 
             <!-- CTA Performance -->
@@ -92,7 +82,7 @@
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="ctaContainer"></div>
             </div>
 
-            <!-- Live Orders Feed -->
+            <!-- Recent Orders -->
             <div class="card">
                 <h3 class="font-semibold mb-4">Recent Orders</h3>
                 <div id="liveOrders" class="space-y-3 max-h-96 overflow-y-auto"></div>
@@ -100,144 +90,67 @@
         </div>
     </main>
 
-    <!-- Footer -->
     <footer class="text-center py-6 text-xs text-gray-400 border-t mt-8">
         Built with ❤️ by <a href="https://www.denisiawebops.org" target="_blank" class="text-blue-500 underline">www.denisiawebops.org</a>
     </footer>
 
     <script>
-        // ====================== CONFIG ======================
         const API_URL = "https://sheet.best/api/sheets/56e750d0-3dcb-4ddd-ba17-3997bb41d273/tabs/Orders";
         let allRows = [];
         let filterTable = 'all';
 
-        // ====================== HELPERS ======================
         function parseJSON(str) {
             try { return JSON.parse(str); } catch(e) { return []; }
         }
 
-        function formatINR(num) { return '₹' + num.toLocaleString('en-IN'); }
-
-        // ====================== FETCH & PROCESS ======================
         async function fetchData() {
             try {
                 const res = await fetch(API_URL);
                 if (!res.ok) throw new Error('API error');
                 const data = await res.json();
-                // Filter out header rows if any
-                allRows = data.filter(row => row.Timestamp && row.Action !== 'ANALYTICS' ? true : row.Action === 'ANALYTICS');
+                allRows = data.filter(row => row.Timestamp);
                 processAndRender();
             } catch(e) {
-                console.error(e);
                 document.getElementById('loading').innerHTML = '<p class="text-red-500">Failed to load data</p>';
             }
         }
 
         function processAndRender() {
-            // Filter by table
-            let rows = filterTable === 'all' ? allRows : allRows.filter(r => r.Table === filterTable);
+            const rows = filterTable === 'all' ? allRows : allRows.filter(r => r.Table === filterTable);
             const now = new Date();
             const todayStr = now.toISOString().split('T')[0];
 
-            // Separate orders and analytics
             const orders = rows.filter(r => r.Action === 'ORDER');
             const analytics = rows.filter(r => r.Action === 'ANALYTICS');
 
-            // Today's metrics
+            // Pending orders (today's orders only)
             const todayOrders = orders.filter(o => o.Timestamp?.startsWith(todayStr));
+            renderPendingOrders(todayOrders);
+
+            // Metrics
             const ordersCount = todayOrders.length;
             const revenue = todayOrders.reduce((sum, o) => sum + parseFloat(o.Total || 0), 0);
             const aov = ordersCount ? revenue / ordersCount : 0;
-
-            // Busiest table (today)
             const tableCounts = {};
             todayOrders.forEach(o => { tableCounts[o.Table] = (tableCounts[o.Table] || 0) + 1; });
-            const busiest = Object.keys(tableCounts).sort((a,b) => tableCounts[b] - tableCounts[a])[0] || '--';
+            const busiest = Object.keys(tableCounts).sort((a,b)=>tableCounts[b]-tableCounts[a])[0] || '--';
 
             document.getElementById('ordersToday').textContent = ordersCount;
-            document.getElementById('revenueToday').textContent = formatINR(revenue);
-            document.getElementById('aovToday').textContent = formatINR(aov);
+            document.getElementById('revenueToday').textContent = '₹' + revenue.toLocaleString('en-IN');
+            document.getElementById('aovToday').textContent = '₹' + Math.round(aov).toLocaleString('en-IN');
             document.getElementById('busiestTable').textContent = busiest;
 
-            // Revenue Trend (last 7 days)
-            const last7 = [];
-            for (let i=6; i>=0; i--) {
-                const d = new Date(now);
-                d.setDate(d.getDate()-i);
-                const ds = d.toISOString().split('T')[0];
-                const dayOrders = orders.filter(o => o.Timestamp?.startsWith(ds));
-                const sum = dayOrders.reduce((s,o) => s + parseFloat(o.Total||0), 0);
-                last7.push({ date: d.toLocaleDateString('en-IN', {month:'short', day:'numeric'}), revenue: sum });
-            }
-            renderRevenueChart(last7);
+            // Charts (same as before, unchanged)
+            // ... (chart rendering code from original dashboard) ...
 
-            // Table performance (all orders, not just today)
-            const tablePerf = { table1:0, table2:0, table3:0, table4:0, table5:0 };
-            orders.forEach(o => { if(tablePerf[o.Table]!==undefined) tablePerf[o.Table]++; });
-            renderTableChart(tablePerf);
-
-            // Payment split
-            const paymentCounts = { Cash: 0, UPI: 0 };
-            orders.forEach(o => {
-                if(o.Method?.includes('CASH')) paymentCounts.Cash++;
-                else if(o.Method?.startsWith('UPI')) paymentCounts.UPI++;
-            });
-            renderPaymentChart(paymentCounts);
-
-            // CTA Performance
-            const ctaCounts = { 'ad_click': 0, 'zomato': 0, 'magicpin': 0, 'whatsapp': 0 };
-            analytics.forEach(a => {
-                const extra = (a.Extra || '').toLowerCase();
-                if (extra.includes('partner')) ctaCounts.ad_click++;
-                else if (extra.includes('zomato')) ctaCounts.zomato++;
-                else if (extra.includes('magicpin')) ctaCounts.magicpin++;
-                else if (extra.includes('whatsapp')) ctaCounts.whatsapp++;
-            });
-            renderCTASection(ctaCounts);
-
-            // Forecast (13 weeks history + 1 week forecast)
-            const dailyRevenue = {};
-            orders.forEach(o => {
-                const d = o.Timestamp?.split('T')[0];
-                if(!d) return;
-                dailyRevenue[d] = (dailyRevenue[d] || 0) + parseFloat(o.Total||0);
-            });
-            const sortedDays = Object.keys(dailyRevenue).sort();
-            const historicalDays = sortedDays.slice(-91); // last 91 days ≈ 13 weeks
-            const revenueValues = historicalDays.map(d => dailyRevenue[d]);
-
-            // Simple linear regression
-            const n = revenueValues.length;
-            if (n > 1) {
-                const x = Array.from({length: n}, (_,i) => i);
-                const sumX = x.reduce((a,b)=>a+b,0);
-                const sumY = revenueValues.reduce((a,b)=>a+b,0);
-                const sumXY = x.reduce((t,xi,i)=>t + xi*revenueValues[i], 0);
-                const sumX2 = x.reduce((t,xi)=>t + xi*xi, 0);
-                const slope = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX);
-                const intercept = (sumY - slope*sumX) / n;
-                const forecastDays = 7;
-                const forecastX = Array.from({length: forecastDays}, (_,i) => n+i);
-                const forecastY = forecastX.map(xi => Math.max(0, slope*xi + intercept));
-                renderForecastChart(historicalDays, revenueValues, forecastY);
-            } else {
-                renderForecastChart([], [], []);
-            }
-
-            // Live Orders (latest 20)
-            const recentOrders = orders.sort((a,b) => (b.Timestamp||'').localeCompare(a.Timestamp||'')).slice(0,20);
-            const liveDiv = document.getElementById('liveOrders');
-            liveDiv.innerHTML = recentOrders.map(o => {
+            // Recent orders
+            const recentOrders = orders.sort((a,b)=>(b.Timestamp||'').localeCompare(a.Timestamp||'')).slice(0,20);
+            document.getElementById('liveOrders').innerHTML = recentOrders.map(o => {
                 const items = parseJSON(o['Items (JSON)'] || '[]');
                 const itemList = items.map(i => `${i.title} x${i.qty}`).join(', ');
-                return `
-                <div class="flex items-start justify-between border-b border-gray-100 pb-2">
-                    <div>
-                        <p class="font-semibold text-sm">${o.Table} · ${o.Method}</p>
-                        <p class="text-xs text-gray-500">${itemList || 'No items'}</p>
-                    </div>
-                    <span class="font-bold text-orange-600">₹${o.Total}</span>
-                </div>`;
+                return `<div class="flex items-start justify-between border-b border-gray-100 pb-2">
+                    <div><p class="font-semibold text-sm">${o.Table} · ${o.Method}</p><p class="text-xs text-gray-500">${itemList || 'No items'}</p></div>
+                    <span class="font-bold text-orange-600">₹${o.Total}</span></div>`;
             }).join('');
 
             document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
@@ -245,9 +158,38 @@
             document.getElementById('content').classList.remove('hidden');
         }
 
-        // ====================== CHART RENDERERS ======================
-        let revenueChart, tableChart, paymentChart, forecastChart;
+        function renderPendingOrders(todayOrders) {
+            const grouped = {};
+            todayOrders.forEach(o => {
+                const table = o.Table || 'Unknown';
+                if (!grouped[table]) grouped[table] = [];
+                grouped[table].push(o);
+            });
+            const container = document.getElementById('pendingOrders');
+            container.innerHTML = Object.entries(grouped).map(([table, orders]) => {
+                const itemsList = orders.map(o => {
+                    const items = parseJSON(o['Items (JSON)'] || '[]');
+                    const now = new Date();
+                    const orderTime = new Date(o.Timestamp);
+                    const minsAgo = Math.floor((now - orderTime) / 60000);
+                    const timeStr = minsAgo < 1 ? 'Just now' : `${minsAgo} min ago`;
+                    const itemStr = items.map(i => `${i.title} x${i.qty}`).join(', ');
+                    return `<div class="flex justify-between items-center text-sm py-1">
+                        <span class="text-gray-700">${itemStr}</span>
+                        <span class="text-xs text-gray-500">${timeStr} · ${o.Method}</span>
+                    </div>`;
+                }).join('');
+                return `<div class="pending-table bg-orange-50 rounded-xl p-3">
+                    <h4 class="font-bold text-gray-800 mb-1">${table.toUpperCase()}</h4>
+                    ${itemsList}
+                </div>`;
+            }).join('') || '<p class="text-gray-500">No pending orders for today.</p>';
+        }
 
+        // Chart rendering functions (identical to the previous dashboard) ...
+        // I'll keep them as they were – they work fine.
+
+        let revenueChart, tableChart, paymentChart, forecastChart;
         function renderRevenueChart(data) {
             const ctx = document.getElementById('revenueChart').getContext('2d');
             if (revenueChart) revenueChart.destroy();
@@ -266,7 +208,6 @@
                 options: { responsive: true, plugins: { legend: { display: false } } }
             });
         }
-
         function renderTableChart(data) {
             const ctx = document.getElementById('tableChart').getContext('2d');
             if (tableChart) tableChart.destroy();
@@ -283,7 +224,6 @@
                 options: { responsive: true, plugins: { legend: { display: false } } }
             });
         }
-
         function renderPaymentChart(data) {
             const ctx = document.getElementById('paymentChart').getContext('2d');
             if (paymentChart) paymentChart.destroy();
@@ -298,7 +238,6 @@
                 }
             });
         }
-
         function renderForecastChart(historicalDays, historicalValues, forecastValues) {
             const ctx = document.getElementById('forecastChart').getContext('2d');
             if (forecastChart) forecastChart.destroy();
@@ -336,7 +275,6 @@
                 options: { responsive: true }
             });
         }
-
         function renderCTASection(counts) {
             const container = document.getElementById('ctaContainer');
             const items = [
@@ -348,25 +286,84 @@
             container.innerHTML = items.map(i => `
                 <div class="flex items-center gap-3 p-3 rounded-xl ${i.color}">
                     <i data-lucide="${i.icon}" class="w-5 h-5"></i>
-                    <div>
-                        <p class="text-xs font-medium">${i.name}</p>
-                        <p class="text-lg font-bold">${i.value}</p>
-                    </div>
+                    <div><p class="text-xs font-medium">${i.name}</p><p class="text-lg font-bold">${i.value}</p></div>
                 </div>
             `).join('');
             lucide.createIcons();
         }
 
-        // ====================== EVENTS ======================
-        document.getElementById('tableFilter').addEventListener('change', (e) => {
+        // Forecast calculation
+        function calculateForecast(orders) {
+            const dailyRevenue = {};
+            orders.forEach(o => {
+                const d = o.Timestamp?.split('T')[0];
+                if(!d) return;
+                dailyRevenue[d] = (dailyRevenue[d] || 0) + parseFloat(o.Total||0);
+            });
+            const sortedDays = Object.keys(dailyRevenue).sort();
+            const historicalDays = sortedDays.slice(-91);
+            const revenueValues = historicalDays.map(d => dailyRevenue[d]);
+            if (revenueValues.length < 2) return;
+            const n = revenueValues.length;
+            const x = Array.from({length: n}, (_,i) => i);
+            const sumX = x.reduce((a,b)=>a+b,0);
+            const sumY = revenueValues.reduce((a,b)=>a+b,0);
+            const sumXY = x.reduce((t,xi,i)=>t + xi*revenueValues[i], 0);
+            const sumX2 = x.reduce((t,xi)=>t + xi*xi, 0);
+            const slope = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX);
+            const intercept = (sumY - slope*sumX) / n;
+            const forecastValues = Array.from({length:7}, (_,i)=>Math.max(0, slope*(n+i) + intercept));
+            renderForecastChart(historicalDays, revenueValues, forecastValues);
+        }
+
+        // Update processAndRender to include forecast and charts
+        // I'll combine the missing chart calls:
+        const originalProcess = processAndRender;
+        processAndRender = function() {
+            originalProcess();
+            const rows = filterTable === 'all' ? allRows : allRows.filter(r => r.Table === filterTable);
+            const orders = rows.filter(r => r.Action === 'ORDER');
+            const analytics = rows.filter(r => r.Action === 'ANALYTICS');
+            const now = new Date();
+            const last7 = [];
+            for (let i=6; i>=0; i--) {
+                const d = new Date(now);
+                d.setDate(d.getDate()-i);
+                const ds = d.toISOString().split('T')[0];
+                const dayOrders = orders.filter(o => o.Timestamp?.startsWith(ds));
+                const sum = dayOrders.reduce((s,o)=>s+parseFloat(o.Total||0),0);
+                last7.push({ date: d.toLocaleDateString('en-IN',{month:'short',day:'numeric'}), revenue: sum });
+            }
+            renderRevenueChart(last7);
+            const tablePerf = { table1:0, table2:0, table3:0, table4:0, table5:0 };
+            orders.forEach(o => { if(tablePerf[o.Table]!==undefined) tablePerf[o.Table]++; });
+            renderTableChart(tablePerf);
+            const paymentCounts = { Cash: 0, UPI: 0 };
+            orders.forEach(o => {
+                if(o.Method?.includes('CASH')) paymentCounts.Cash++;
+                else if(o.Method?.startsWith('UPI')) paymentCounts.UPI++;
+            });
+            renderPaymentChart(paymentCounts);
+            calculateForecast(orders);
+            const ctaCounts = { ad_click:0, zomato:0, magicpin:0, whatsapp:0 };
+            analytics.forEach(a => {
+                const extra = (a.Extra||'').toLowerCase();
+                if(extra.includes('partner')) ctaCounts.ad_click++;
+                else if(extra.includes('zomato')) ctaCounts.zomato++;
+                else if(extra.includes('magicpin')) ctaCounts.magicpin++;
+                else if(extra.includes('whatsapp')) ctaCounts.whatsapp++;
+            });
+            renderCTASection(ctaCounts);
+        };
+
+        document.getElementById('tableFilter').addEventListener('change', e => {
             filterTable = e.target.value;
             processAndRender();
         });
 
-        // ====================== INIT ======================
         function init() {
             fetchData();
-            setInterval(fetchData, 30000); // refresh every 30 seconds
+            setInterval(fetchData, 30000);
         }
         window.onload = init;
     </script>
