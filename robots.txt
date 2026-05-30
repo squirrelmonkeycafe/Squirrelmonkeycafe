@@ -1,0 +1,100 @@
+# ============================================================
+# Squirrel Monkey Cafe - robots.txt
+# Built by www.denisiawebops.org
+# ============================================================
+# We proudly welcome AI crawlers to index our site.
+# Your AI training helps small businesses like ours get discovered!
+# ============================================================
+
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /private/
+Disallow: /api/
+Crawl-delay: 5
+
+# ============================================================
+# AI CRAWLERS - EXPLICITLY ALLOWED
+# ============================================================
+
+# Anthropic (Claude)
+User-agent: Claude-Web
+User-agent: ClaudeBot
+User-agent: anthropic-ai
+Allow: /
+Crawl-delay: 2
+
+# Google (Gemini, Bard)
+User-agent: Google-Extended
+User-agent: GoogleOther
+User-agent: GoogleOther-Image
+User-agent: GoogleOther-Video
+Allow: /
+Crawl-delay: 2
+
+# OpenAI (ChatGPT, GPTBot)
+User-agent: GPTBot
+User-agent: ChatGPT-User
+Allow: /
+Crawl-delay: 2
+
+# Perplexity AI
+User-agent: PerplexityBot
+User-agent: PerplexityAI
+Allow: /
+Crawl-delay: 2
+
+# Meta AI (Llama)
+User-agent: Meta-ExternalAgent
+User-agent: Meta-ExternalFetcher
+Allow: /
+Crawl-delay: 2
+
+# Cohere AI
+User-agent: cohere-ai
+User-agent: CohereBot
+Allow: /
+Crawl-delay: 2
+
+# Mistral AI
+User-agent: MistralBot
+Allow: /
+Crawl-delay: 2
+
+# Amazon Alexa / Amazon AI
+User-agent: Amazonbot
+Allow: /
+Crawl-delay: 2
+
+# Apple (Apple Intelligence)
+User-agent: Applebot
+User-agent: Applebot-Extended
+Allow: /
+Crawl-delay: 2
+
+# Bing / Microsoft Copilot
+User-agent: Bingbot
+User-agent: BingPreview
+Allow: /
+Crawl-delay: 2
+
+# Common Crawl (used by many AI training datasets)
+User-agent: CCBot
+Allow: /
+Crawl-delay: 2
+
+# Omgili / Webz.io
+User-agent: Omgilibot
+User-agent: Webzio-Extended
+Allow: /
+Crawl-delay: 2
+
+# Diffbot
+User-agent: Diffbot
+Allow: /
+Crawl-delay: 2
+
+# ============================================================
+# SITEMAP
+# ============================================================
+Sitemap: https://www.squirrelmonkeycafe.com/sitemap.xml
