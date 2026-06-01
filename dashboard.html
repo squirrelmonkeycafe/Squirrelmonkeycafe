@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Dashboard | Squirrel Monkey</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        .fade-in { animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .card { background: white; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .new-order-flash { animation: flashHighlight 1s ease-out; }
+        @keyframes flashHighlight { 0% { background-color: #ffedd5; } 100% { background-color: transparent; } }
+        .table-card { transition: all 0.2s ease; }
+        .table-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
+        .heatmap-cell { border-radius: 4px; cursor: pointer; transition: transform 0.1s; }
+        .heatmap-cell:hover { transform: scale(1.05); }
+        .modal-overlay { background: rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans overflow-x-hidden">
+    <header class="bg-white shadow-sm sticky top-0 z-30 p-4 flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-black text-orange-600">Squirrel Monkey</h1>
+            <p class="text-xs text-gray-500">Live Order Dashboard</p>
+        </div>
+        <div class="flex items-center gap-3 flex-wrap">
+            <!-- Multi-table selector -->
+            <div class="multi-dropdown relative">
+                <button id="multiTableBtn" class="bg-gray-100 rounded-lg px-3 py-2 text-sm border border-gray-200 flex items-center gap-2 hover:bg-gray-200 transition">
+                    <span id="selectedTablesText">All Tables</span>
+                    <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                </button>
+                <div id="multiTableMenu" class="multi-dropdown-menu hidden absolute right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-2 min-w-[200px]">
+                    <label class="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-lg cursor-pointer text-sm">
+                        <input type="checkbox" id="table_all" checked class="rounded"> All Tables
+                    </label>
+                    <hr class="my-1">
+                    <label class="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-lg cursor-pointer text-sm"><input type="checkbox" id="table_table1" checked class="rounded"> Table 1</label>
+                    <label class="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-lg cursor-pointer text-sm"><input type="checkbox" id="table_table2" checked class="rounded"> Table 2</label>
+                    <label class="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-lg cursor-pointer text-sm"><input type="checkbox" id="table_table3" checked class="rounded"> Table 3</label>
+                    <label class="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-lg cursor-pointer text-sm"><input type="checkbox" id="table_table4" checked class="rounded"> Table 4</label>
+                    <label class="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-lg cursor-pointer text-sm"><input type="checkbox" id="table_table5" checked class="rounded"> Table 5</label>
+                </div>
+            </div>
+            <button id="downloadBtn" class="flex items-center gap-2 bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition shadow-md">
+                <i data-lucide="download" class="w-4 h-4"></i> Snapshot
+            </button>
+            <button id="soundToggle" class="text-gray-500 hover:text-orange-500 transition" title="Toggle sound alerts">
+                <i data-lucide="volume-x" class="w-5 h-5"></i>
+            </button>
+            <span class="text-xs text-gray-400">Updated: <span id="lastUpdate">--</span></span>
+        </div>
+    </header>
+
+    <main id="dashboard" class="max-w-7xl mx-auto p-4 space-y-6 w-full">
+        <div id="loading" class="flex justify-center py-20"><i data-lucide="loader" class="animate-spin text-orange-500 w-10 h-10"></i></div>
+        <div id="content" class="hidden space-y-6">
+
+            <!-- Pending Orders Board -->
+            <div class="card bg-gradient-to-br from-white to-orange-50">
+                <h3 class="font-semibold mb-6 text-lg flex items-center gap-2"><i data-lucide="clipboard-list" class="w-5 h-5 text-orange-500"></i> Pending Orders</h3>
+                <div id="pendingOrders" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4"></div>
+            </div>
+
+            <!-- Today's Metrics -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="card"><p class="text-sm text-gray-500">Orders Today</p><p class="text-2xl font-bold" id="ordersToday">0</p></div>
+                <div class="card"><p class="text-sm text-gray-500">Revenue Today</p><p class="text-2xl font-bold" id="revenueToday">₹0</p></div>
+                <div class="card"><p class="text-sm text-gray-500">Avg Order Value</p><p class="text-2xl font-bold" id="aovToday">₹0</p></div>
+                <div class="card"><p class="text-sm text-gray-500">Busiest Table</p><p class="text-2xl font-bold" id="busiestTable">--</p></div>
+            </div>
+
+            <!-- NEW: Week-on-Week -->
+            <div class="card">
+                <h3 class="font-semibold mb-3">Week‑on‑Week Revenue (This Week vs Last Week)</h3>
+                <canvas id="wowChart" height="200"></canvas>
+            </div>
+
+            <!-- NEW: Day-on-Day -->
+            <div class="card">
+                <h3 class="font-semibold mb-3">Daily Revenue (Last 30 Days)</h3>
+                <canvas id="dodChart" height="200"></canvas>
+            </div>
+
+            <!-- NEW: Daily Heatmap -->
+            <div class="card">
+                <h3 class="font-semibold mb-3">Daily Heatmap (Current Month)</h3>
+                <div id="heatmap" class="grid grid-cols-7 gap-1 text-center"></div>
+            </div>
+
+            <!-- Charts -->
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="card"><h3 class="font-semibold mb-3">Revenue Trend (7 Days)</h3><canvas id="revenueChart" height="200"></canvas></div>
+                <div class="card"><h3 class="font-semibold mb-3">Table Performance</h3><canvas id="tableChart" height="200"></canvas></div>
+                <div class="card"><h3 class="font-semibold mb-3">Payment Methods</h3><canvas id="paymentChart" height="200"></canvas></div>
+                <div class="card"><h3 class="font-semibold mb-3">13‑Week Forecast</h3><canvas id="forecastChart" height="200"></canvas></div>
+            </div>
+
+            <!-- CTA Performance -->
+            <div class="card"><h3 class="font-semibold mb-4">CTA Performance</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="ctaContainer"></div></div>
+
+            <!-- Bookings -->
+            <div class="card"><h3 class="font-semibold mb-4">Upcoming Bookings</h3><div id="bookingsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div></div>
+
+            <!-- Recent Orders -->
+            <div class="card"><h3 class="font-semibold mb-4">Recent Orders</h3><div id="liveOrders" class="space-y-3 max-h-96 overflow-y-auto"></div></div>
+        </div>
+    </main>
+
+    <!-- Day Detail Modal -->
+    <div id="dayModal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-overlay">
+        <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-800" id="modalDate">Day Performance</h3>
+                <button onclick="closeDayModal()" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <footer class="text-center py-6 text-xs text-gray-400 border-t mt-8">
+        Built with ❤️ by <a href="https://www.denisiawebops.org" target="_blank" class="text-blue-500 underline">www.denisiawebops.org</a>
+    </footer>
+
+    <script>
+        const ORDERS_API = "https://sheet.best/api/sheets/56e750d0-3dcb-4ddd-ba17-3997bb41d273/tabs/Orders";
+        const BOOKINGS_API = "https://sheet.best/api/sheets/56e750d0-3dcb-4ddd-ba17-3997bb41d273/tabs/Bookings";
+        let allOrders = [];
+        let allBookings = [];
+        let selectedTables = ['table1','table2','table3','table4','table5'];
+        let previousOrderIds = new Set();
+        let soundEnabled = false;
+
+        function playBeep() {
+            if (!soundEnabled) return;
+            try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination); osc.frequency.value = 800; gain.gain.value = 0.3; osc.start(); osc.stop(ctx.currentTime + 0.15); } catch(e) {}
+        }
+
+        document.getElementById('soundToggle').addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('soundToggle').querySelector('i');
+            icon.setAttribute('data-lucide', soundEnabled ? 'volume-2' : 'volume-x');
+            lucide.createIcons();
+        });
+
+        // Multi-table dropdown logic
+        const multiBtn = document.getElementById('multiTableBtn');
+        const multiMenu = document.getElementById('multiTableMenu');
+        multiBtn.addEventListener('click', (e) => { e.stopPropagation(); multiMenu.classList.toggle('hidden'); });
+        document.addEventListener('click', () => multiMenu.classList.add('hidden'));
+        multiMenu.addEventListener('click', (e) => e.stopPropagation());
+
+        const checkboxes = {
+            all: document.getElementById('table_all'),
+            table1: document.getElementById('table_table1'),
+            table2: document.getElementById('table_table2'),
+            table3: document.getElementById('table_table3'),
+            table4: document.getElementById('table_table4'),
+            table5: document.getElementById('table_table5')
+        };
+
+        function updateSelectedTables() {
+            if (checkboxes.all.checked) {
+                selectedTables = ['table1','table2','table3','table4','table5'];
+                for (let key in checkboxes) if (key !== 'all') checkboxes[key].checked = true;
+            } else {
+                selectedTables = [];
+                for (let key in checkboxes) if (key !== 'all' && checkboxes[key].checked) selectedTables.push(key);
+                if (selectedTables.length === 0) {
+                    selectedTables = ['table1','table2','table3','table4','table5'];
+                    checkboxes.all.checked = true;
+                    for (let key in checkboxes) if (key !== 'all') checkboxes[key].checked = true;
+                }
+            }
+            updateSelectionText();
+            previousOrderIds.clear();
+            processAndRender();
+        }
+
+        function updateSelectionText() {
+            document.getElementById('selectedTablesText').textContent = selectedTables.length === 5 ? 'All Tables' : selectedTables.map(t => t.replace('table','T')).join(', ');
+        }
+
+        checkboxes.all.addEventListener('change', updateSelectedTables);
+        for (let key of ['table1','table2','table3','table4','table5']) {
+            checkboxes[key].addEventListener('change', () => {
+                if (!checkboxes[key].checked) checkboxes.all.checked = false;
+                updateSelectedTables();
+            });
+        }
+
+        // Snapshot download
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            html2canvas(document.getElementById('dashboard'), { scale: 2, useCORS: true, backgroundColor: '#f9fafb' }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `squirrel-monkey-dashboard-${new Date().toISOString().slice(0,10)}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(err => console.error('Screenshot failed', err));
+        });
+
+        function parseJSON(str) { try { return JSON.parse(str); } catch(e) { return []; } }
+
+        async function fetchAllData() {
+            try {
+                const [ordersRes, bookingsRes] = await Promise.all([fetch(ORDERS_API), fetch(BOOKINGS_API)]);
+                if (!ordersRes.ok) throw new Error('Orders API error');
+                allOrders = (await ordersRes.json()).filter(row => row.Timestamp);
+                allBookings = bookingsRes.ok ? (await bookingsRes.json()).filter(row => row.Timestamp) : [];
+                processAndRender();
+            } catch(e) { document.getElementById('loading').innerHTML = '<p class="text-red-500">Connection error</p>'; }
+        }
+
+        function processAndRender() {
+            const filteredOrders = allOrders.filter(r => selectedTables.includes(r.Table));
+            const filteredBookings = allBookings.filter(r => selectedTables.includes(r.Table));
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+
+            const orders = filteredOrders.filter(r => r.Action === 'ORDER');
+            const analytics = filteredOrders.filter(r => r.Action === 'ANALYTICS');
+
+            const currentOrderIds = new Set(allOrders.map(o => o.Timestamp));
+            const newOrders = allOrders.filter(o => !previousOrderIds.has(o.Timestamp));
+            if (newOrders.length > 0 && previousOrderIds.size > 0) playBeep();
+            previousOrderIds = currentOrderIds;
+
+            const allTodayOrders = allOrders.filter(r => r.Action === 'ORDER' && r.Timestamp?.startsWith(todayStr) && selectedTables.includes(r.Table));
+            renderPendingBoard(allTodayOrders, newOrders);
+
+            const todayOrders = orders.filter(o => o.Timestamp?.startsWith(todayStr));
+            const ordersCount = todayOrders.length;
+            const revenue = todayOrders.reduce((sum, o) => sum + parseFloat(o.Total || 0), 0);
+            const aov = ordersCount ? revenue / ordersCount : 0;
+            const tableCounts = {};
+            orders.forEach(o => { tableCounts[o.Table] = (tableCounts[o.Table] || 0) + 1; });
+            const busiest = Object.keys(tableCounts).sort((a,b)=>tableCounts[b]-tableCounts[a])[0] || '--';
+
+            document.getElementById('ordersToday').textContent = ordersCount;
+            document.getElementById('revenueToday').textContent = '₹' + revenue.toLocaleString('en-IN');
+            document.getElementById('aovToday').textContent = '₹' + Math.round(aov).toLocaleString('en-IN');
+            document.getElementById('busiestTable').textContent = busiest;
+
+            // Existing charts
+            updateCharts(orders, analytics);
+
+            // NEW: WoW, DoD, Heatmap
+            renderWoW(orders);
+            renderDoD(orders);
+            renderHeatmap(orders);
+
+            // Recent orders
+            const recentOrders = orders.sort((a,b)=>(b.Timestamp||'').localeCompare(a.Timestamp||'')).slice(0,20);
+            document.getElementById('liveOrders').innerHTML = recentOrders.map(o => {
+                const items = parseJSON(o['Items (JSON)'] || '[]');
+                const itemList = items.map(i => `${i.title} x${i.qty}`).join(', ');
+                const isNew = newOrders.some(no => no.Timestamp === o.Timestamp);
+                return `<div class="flex items-start justify-between border-b border-gray-100 pb-2 ${isNew ? 'new-order-flash' : ''}"><div><p class="font-semibold text-sm">${o.Table} · ${o.Method}</p><p class="text-xs text-gray-500">${itemList || 'No items'}</p></div><span class="font-bold text-orange-600">₹${o.Total}</span></div>`;
+            }).join('');
+
+            renderBookings(filteredBookings);
+
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('content').classList.remove('hidden');
+        }
+
+        // --------------- New Week-on-Week ---------------
+        function renderWoW(orders) {
+            const now = new Date();
+            const currentWeek = getWeekDates(now);
+            const lastWeek = getWeekDates(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7));
+
+            const currentRevenue = currentWeek.map(d => {
+                const dayStr = d.toISOString().split('T')[0];
+                return orders.filter(o => o.Timestamp?.startsWith(dayStr)).reduce((s,o) => s + parseFloat(o.Total||0), 0);
+            });
+            const lastRevenue = lastWeek.map(d => {
+                const dayStr = d.toISOString().split('T')[0];
+                return orders.filter(o => o.Timestamp?.startsWith(dayStr)).reduce((s,o) => s + parseFloat(o.Total||0), 0);
+            });
+
+            const labels = currentWeek.map(d => d.toLocaleDateString('en-IN', { weekday:'short' }));
+            const ctx = document.getElementById('wowChart').getContext('2d');
+            if (window.wowChart) window.wowChart.destroy();
+            window.wowChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'This Week', data: currentRevenue, backgroundColor: '#f97316' },
+                        { label: 'Last Week', data: lastRevenue, backgroundColor: '#d1d5db' }
+                    ]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+
+        function getWeekDates(date) {
+            const day = date.getDay(); // 0=Sun
+            const start = new Date(date);
+            start.setDate(date.getDate() - (day === 0 ? 6 : day - 1)); // Monday
+            start.setHours(0,0,0,0);
+            const dates = [];
+            for (let i=0; i<7; i++) {
+                const d = new Date(start);
+                d.setDate(start.getDate() + i);
+                dates.push(d);
+            }
+            return dates;
+        }
+
+        // --------------- New Day-on-Day ---------------
+        function renderDoD(orders) {
+            const now = new Date();
+            const dailyRev = {};
+            for (let i=29; i>=0; i--) {
+                const d = new Date(now);
+                d.setDate(d.getDate() - i);
+                const ds = d.toISOString().split('T')[0];
+                const rev = orders.filter(o => o.Timestamp?.startsWith(ds)).reduce((s,o) => s + parseFloat(o.Total||0), 0);
+                dailyRev[ds] = rev;
+            }
+            const labels = Object.keys(dailyRev).map(d => {
+                const date = new Date(d);
+                return date.toLocaleDateString('en-IN', { day:'numeric', month:'short' });
+            });
+            const values = Object.values(dailyRev);
+
+            const ctx = document.getElementById('dodChart').getContext('2d');
+            if (window.dodChart) window.dodChart.destroy();
+            window.dodChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Revenue',
+                        data: values,
+                        borderColor: '#f97316',
+                        tension: 0.2,
+                        fill: false
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } } }
+            });
+        }
+
+        // --------------- Heatmap ---------------
+        function renderHeatmap(orders) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth(); // 0-indexed
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month+1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startDayOfWeek = firstDay.getDay(); // 0=Sun
+
+            // Compute daily revenue
+            const dailyRevenue = {};
+            for (let d=1; d<=daysInMonth; d++) {
+                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const rev = orders.filter(o => o.Timestamp?.startsWith(dateStr)).reduce((s,o) => s + parseFloat(o.Total||0), 0);
+                dailyRevenue[dateStr] = rev;
+            }
+
+            // Max revenue for color scale
+            const maxRev = Math.max(1, ...Object.values(dailyRevenue));
+
+            const container = document.getElementById('heatmap');
+            container.innerHTML = '';
+
+            // Day headers
+            const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+            dayNames.forEach(d => {
+                container.innerHTML += `<div class="text-xs font-semibold text-gray-500 py-1">${d}</div>`;
+            });
+
+            // Empty cells before first day
+            for (let i=0; i<startDayOfWeek; i++) {
+                container.innerHTML += `<div></div>`;
+            }
+
+            // Day cells
+            for (let d=1; d<=daysInMonth; d++) {
+                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const rev = dailyRevenue[dateStr] || 0;
+                const intensity = maxRev ? rev / maxRev : 0;
+                const bg = rev > 0 ? `rgba(249,115,22,${0.2 + intensity*0.6})` : '#f9fafb';
+                const textColor = intensity > 0.5 ? 'white' : '#374151';
+                const cell = document.createElement('div');
+                cell.className = 'heatmap-cell flex flex-col items-center justify-center p-1 text-xs font-medium';
+                cell.style.backgroundColor = bg;
+                cell.style.color = textColor;
+                cell.innerHTML = `<span>${d}</span><span class="text-[10px]">₹${rev}</span>`;
+                cell.onclick = () => showDayDetails(dateStr, orders);
+                container.appendChild(cell);
+            }
+
+            // Fill remaining cells
+            const totalCells = startDayOfWeek + daysInMonth;
+            const remaining = 7 - (totalCells % 7);
+            if (remaining < 7) {
+                for (let i=0; i<remaining; i++) container.innerHTML += `<div></div>`;
+            }
+        }
+
+        // --------------- Day Details Modal ---------------
+        function showDayDetails(dateStr, allOrders) {
+            const dayOrders = allOrders.filter(o => o.Timestamp?.startsWith(dateStr));
+            const totalRev = dayOrders.reduce((s,o) => s + parseFloat(o.Total||0), 0);
+            const count = dayOrders.length;
+
+            // Aggregate items
+            const itemCounts = {};
+            dayOrders.forEach(o => {
+                const items = parseJSON(o['Items (JSON)'] || '[]');
+                items.forEach(i => { itemCounts[i.title] = (itemCounts[i.title] || 0) + i.qty; });
+            });
+            const sortedItems = Object.entries(itemCounts).sort((a,b) => b[1]-a[1]);
+
+            // Payment split
+            const cash = dayOrders.filter(o => o.Method?.includes('CASH')).length;
+            const upi = dayOrders.filter(o => o.Method?.startsWith('UPI')).length;
+
+            document.getElementById('modalDate').textContent = `Day: ${new Date(dateStr).toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'short', year:'numeric' })}`;
+            const content = `
+                <p class="text-sm">Orders: <span class="font-bold">${count}</span></p>
+                <p class="text-sm">Revenue: <span class="font-bold">₹${totalRev.toLocaleString('en-IN')}</span></p>
+                <p class="text-sm">Avg Order: <span class="font-bold">₹${count ? Math.round(totalRev/count) : 0}</span></p>
+                <p class="text-sm">Payment: <span class="font-bold">Cash: ${cash}</span> | <span class="font-bold">UPI: ${upi}</span></p>
+                <h4 class="font-semibold mt-3 mb-1">Top Items</h4>
+                <ul class="list-disc list-inside text-sm">${sortedItems.slice(0,5).map(([name,qty]) => `<li>${name} x${qty}</li>`).join('')}</ul>
+            `;
+            document.getElementById('modalContent').innerHTML = content;
+            document.getElementById('dayModal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeDayModal() {
+            document.getElementById('dayModal').classList.add('hidden');
+        }
+
+        // --------------- Existing Charts (unchanged) ---------------
+        let revenueChart, tableChart, paymentChart, forecastChart;
+
+        function updateCharts(orders, analytics) {
+            const now = new Date();
+            const last7 = [];
+            for (let i=6; i>=0; i--) {
+                const d = new Date(now);
+                d.setDate(d.getDate()-i);
+                const ds = d.toISOString().split('T')[0];
+                const dayOrders = orders.filter(o => o.Timestamp?.startsWith(ds));
+                const sum = dayOrders.reduce((s,o)=>s+parseFloat(o.Total||0),0);
+                last7.push({ date: d.toLocaleDateString('en-IN',{month:'short',day:'numeric'}), revenue: sum });
+            }
+            renderRevenueChart(last7);
+
+            const tablePerf = { table1:0, table2:0, table3:0, table4:0, table5:0 };
+            orders.forEach(o => { if(tablePerf[o.Table]!==undefined) tablePerf[o.Table]++; });
+            renderTableChart(tablePerf);
+
+            const paymentCounts = { Cash: 0, UPI: 0 };
+            orders.forEach(o => {
+                if(o.Method?.includes('CASH')) paymentCounts.Cash++;
+                else if(o.Method?.startsWith('UPI')) paymentCounts.UPI++;
+            });
+            renderPaymentChart(paymentCounts);
+
+            const dailyRevenue = {};
+            orders.forEach(o => {
+                const d = o.Timestamp?.split('T')[0];
+                if(!d) return;
+                dailyRevenue[d] = (dailyRevenue[d] || 0) + parseFloat(o.Total||0);
+            });
+            const sortedDays = Object.keys(dailyRevenue).sort();
+            const historicalDays = sortedDays.slice(-91);
+            const revenueValues = historicalDays.map(d => dailyRevenue[d]);
+            if (revenueValues.length > 1) {
+                const n = revenueValues.length;
+                const x = Array.from({length: n}, (_,i) => i);
+                const sumX = x.reduce((a,b)=>a+b,0);
+                const sumY = revenueValues.reduce((a,b)=>a+b,0);
+                const sumXY = x.reduce((t,xi,i)=>t+xi*revenueValues[i],0);
+                const sumX2 = x.reduce((t,xi)=>t+xi*xi,0);
+                const slope = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX);
+                const intercept = (sumY - slope*sumX) / n;
+                const forecastValues = Array.from({length:7}, (_,i)=>Math.max(0, slope*(n+i) + intercept));
+                renderForecastChart(historicalDays, revenueValues, forecastValues);
+            }
+
+            const ctaCounts = { ad_click:0, zomato:0, magicpin:0, whatsapp:0 };
+            analytics.forEach(a => {
+                const extra = (a.Extra||'').toLowerCase();
+                if(extra.includes('partner')) ctaCounts.ad_click++;
+                else if(extra.includes('zomato')) ctaCounts.zomato++;
+                else if(extra.includes('magicpin')) ctaCounts.magicpin++;
+                else if(extra.includes('whatsapp')) ctaCounts.whatsapp++;
+            });
+            renderCTASection(ctaCounts);
+        }
+
+        // Pending board (unchanged)
+        function renderPendingBoard(todayOrders, newOrders) {
+            const container = document.getElementById('pendingOrders');
+            const grouped = {};
+            selectedTables.forEach(t => grouped[t] = []);
+            todayOrders.forEach(o => { if (grouped[o.Table]) grouped[o.Table].push(o); });
+            container.innerHTML = selectedTables.map(table => {
+                const orders = grouped[table];
+                const lastOrder = orders.length ? orders[orders.length-1] : null;
+                const now = new Date();
+                let timeAgo = 'No orders';
+                let lastTimestamp = '';
+                if (lastOrder) {
+                    const diffSec = Math.floor((now - new Date(lastOrder.Timestamp)) / 1000);
+                    if (diffSec < 60) timeAgo = `${diffSec}s ago`;
+                    else if (diffSec < 3600) timeAgo = `${Math.floor(diffSec/60)}m ago`;
+                    else timeAgo = `${Math.floor(diffSec/3600)}h ago`;
+                    lastTimestamp = lastOrder.Timestamp;
+                }
+                const isNew = lastOrder && newOrders.some(no => no.Timestamp === lastTimestamp);
+                const itemList = lastOrder ? parseJSON(lastOrder['Items (JSON)'] || '[]').map(i => `${i.title} x${i.qty}`).join(', ') : '';
+                return `<div class="table-card card p-4 rounded-2xl shadow-sm border border-gray-200 relative ${isNew ? 'new-order-flash' : ''}">
+                    <div class="flex items-center justify-between mb-3"><h4 class="font-bold text-gray-700 text-sm uppercase">${table}</h4><span class="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">${orders.length} order(s)</span></div>
+                    <div class="text-xs text-gray-600 mb-1">Last order</div>
+                    <p class="text-lg font-bold text-orange-600">${timeAgo}</p>
+                    ${lastOrder ? `<div class="mt-2 text-xs text-gray-500 truncate">${itemList || 'No details'}</div><p class="text-xs text-gray-400 mt-1">Method: ${lastOrder.Method}</p>` : '<p class="text-xs text-gray-400 mt-2">Waiting for orders...</p>'}
+                </div>`;
+            }).join('');
+        }
+
+        function renderBookings(bookings) {
+            const now = new Date();
+            const upcoming = bookings.filter(b => b.Date && new Date(b.Date) >= new Date(now.setHours(0,0,0,0))).sort((a,b) => (a.Date+a.Time).localeCompare(b.Date+b.Time));
+            document.getElementById('bookingsContainer').innerHTML = upcoming.length ? upcoming.map(b => {
+                const date = new Date(b.Date);
+                return `<div class="bg-orange-50 rounded-xl p-3 border border-orange-100">
+                    <div class="flex justify-between"><h4 class="font-bold text-gray-800">${b.Name||'Guest'}</h4><span class="text-xs bg-white px-2 py-1 rounded-full">${b.Table}</span></div>
+                    <p class="text-sm text-gray-600">${date.toLocaleDateString('en-IN',{day:'numeric',month:'short',weekday:'long'})} at ${b.Time}</p>
+                    <p class="text-xs text-gray-500">${b.Guests} guest(s)</p>
+                </div>`;
+            }).join('') : '<p class="text-gray-500 text-sm col-span-full">No upcoming bookings.</p>';
+        }
+
+        // Chart renderers (unchanged)
+        function renderRevenueChart(data) {
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            if (revenueChart) revenueChart.destroy();
+            revenueChart = new Chart(ctx, { type:'line', data:{ labels: data.map(d=>d.date), datasets:[{ label:'Revenue', data: data.map(d=>d.revenue), borderColor:'#f97316', tension:0.2, fill:false }] }, options:{ responsive:true, plugins:{ legend:{ display:false } } } });
+        }
+        function renderTableChart(data) {
+            const ctx = document.getElementById('tableChart').getContext('2d');
+            if (tableChart) tableChart.destroy();
+            tableChart = new Chart(ctx, { type:'bar', data:{ labels: Object.keys(data), datasets:[{ label:'Orders', data: Object.values(data), backgroundColor:'#f97316' }] }, options:{ responsive:true, plugins:{ legend:{ display:false } } } });
+        }
+        function renderPaymentChart(data) {
+            const ctx = document.getElementById('paymentChart').getContext('2d');
+            if (paymentChart) paymentChart.destroy();
+            paymentChart = new Chart(ctx, { type:'doughnut', data:{ labels:['Cash','UPI'], datasets:[{ data:[data.Cash,data.UPI], backgroundColor:['#374151','#f97316'] }] } });
+        }
+        function renderForecastChart(historicalDays, historicalValues, forecastValues) {
+            const ctx = document.getElementById('forecastChart').getContext('2d');
+            if (forecastChart) forecastChart.destroy();
+            const labels = historicalDays.map(d => new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short'}));
+            forecastChart = new Chart(ctx, {
+                type:'line',
+                data:{
+                    labels: [...labels, ...Array.from({length:7},(_,i) => {
+                        const d = new Date(historicalDays[historicalDays.length-1] || Date.now());
+                        d.setDate(d.getDate()+i+1);
+                        return d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+                    })],
+                    datasets:[
+                        { label:'Historical', data: historicalValues, borderColor:'#f97316', fill:false, pointRadius:1 },
+                        { label:'Forecast', data: [...Array(labels.length).fill(null), ...forecastValues], borderColor:'#22c55e', borderDash:[5,5], fill:false, pointRadius:1 }
+                    ]
+                },
+                options:{ responsive:true }
+            });
+        }
+        function renderCTASection(counts) {
+            document.getElementById('ctaContainer').innerHTML = [
+                { name:'Ad Clicks', icon:'map-pin', value:counts.ad_click, color:'bg-blue-100 text-blue-800' },
+                { name:'Zomato', icon:'external-link', value:counts.zomato, color:'bg-red-100 text-red-800' },
+                { name:'MagicPin', icon:'external-link', value:counts.magicpin, color:'bg-purple-100 text-purple-800' },
+                { name:'WhatsApp', icon:'send', value:counts.whatsapp, color:'bg-green-100 text-green-800' }
+            ].map(i => `<div class="flex items-center gap-3 p-3 rounded-xl ${i.color}"><i data-lucide="${i.icon}" class="w-5 h-5"></i><div><p class="text-xs font-medium">${i.name}</p><p class="text-lg font-bold">${i.value}</p></div></div>`).join('');
+            lucide.createIcons();
+        }
+
+        // Initial load
+        function init() { fetchAllData(); setInterval(fetchAllData, 5000); }
+        window.onload = init;
+    </script>
+</body>
+</html>
