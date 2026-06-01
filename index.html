@@ -190,12 +190,22 @@
         }
 
         function trackDeliveryAppClick(appName) {
-            trackGA4Event('delivery_app_click', {
-                app_name: appName,
-                click_location: 'header_cta',
-                engagement_type: 'outbound_click'
-            });
-        }
+    trackGA4Event('delivery_app_click', {
+        app_name: appName,
+        click_location: 'header_cta',
+        engagement_type: 'outbound_click'
+    });
+    // ✅ Add this block to log the click to Google Sheets
+    sendToSheet(ORDERS_API_URL, {
+        Timestamp: new Date().toISOString(),
+        Table: CURRENT_TABLE,
+        Action: 'ANALYTICS',
+        Method: '',
+        Total: '',
+        "Items (JSON)": '',
+        Extra: appName
+    });
+}
 
         function trackWhatsAppOrder(orderItems, total, method) {
             var now = new Date();
